@@ -39,36 +39,24 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         /* Fix for large numbers wrapping */
-        #portfolio-value {
-             font-size: clamp(2rem, 8vw, 3rem);
-             white-space: nowrap;
-        }
-        .summary-stat p {
-            font-size: clamp(1.25rem, 3.5vw, 2rem); /* Starting font size, JS will adjust if needed */
-            white-space: nowrap; /* As requested: prevent wrapping */
-            height: 2.4rem; /* Give a fixed height to prevent layout shifts */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        #portfolio-value { font-size: clamp(2rem, 8vw, 3rem); white-space: nowrap; }
+        .summary-stat p { word-break: break-word; font-size: clamp(1.25rem, 3.5vw, 2rem); white-space: normal; }
         .auth-link { color: #fb923c; cursor: pointer; text-decoration: underline; }
+        
+        /* Trade Type Radio Buttons */
+        .trade-type-label { cursor: pointer; padding: 0.5rem 1rem; border: 2px solid #4b5563; border-radius: 0.5rem; transition: all 0.2s; }
+        .trade-type-input:checked + .trade-type-label { border-color: #fb923c; background-color: rgba(251, 146, 60, 0.2); font-weight: bold; }
+        .trade-type-input { display: none; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 md:p-8">
-    <div id="maintenance-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-95">
-        <div class="text-center p-8">
-            <i class="fas fa-tools text-6xl text-orange-400 mb-6"></i>
-            <h2 class="text-4xl font-bold text-white mb-4">המערכת בשיפוצים</h2>
-            <p id="maintenance-message" class="text-lg text-gray-300 max-w-md">אנו מבצעים כעת עבודות תחזוקה. נשוב לפעילות בקרוב.</p>
-        </div>
-    </div>
 
-    <div id="auth-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90">
+    <div id="auth-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90">
         <div class="card text-center p-8 w-full max-w-sm">
             <h2 id="auth-title" class="text-3xl font-bold text-white mb-6">התחברות</h2>
             <form id="auth-form">
                 <input type="email" id="email-input" placeholder="כתובת אימייל" class="input-field w-full text-center mb-4" required autocomplete="email">
-                <input type="password" id="password-input" inputmode="numeric" placeholder="סיסמה (6 ספרות)" class="input-field w-full text-center mb-4" required maxlength="6" pattern="\d{6}" title="הסיסמה חייבת להכיל 6 ספרות בדיוק">
+                <input type="password" id="password-input" placeholder="סיסמה" class="input-field w-full text-center mb-4" required>
                 <button type="submit" id="auth-btn" class="w-full btn-primary">התחבר</button>
             </form>
             <div id="auth-loader" class="hidden loader"></div>
@@ -135,7 +123,15 @@
 
             <div class="lg:col-span-3">
                 <div class="card sticky top-8">
-                    <h2 class="text-2xl font-semibold mb-6">הוספת עסקה חדשה</h2>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold">הוספת עסקה חדשה</h2>
+                        <div class="flex gap-4">
+                            <input type="radio" id="trade-type-long" name="trade-type" value="long" class="trade-type-input" checked>
+                            <label for="trade-type-long" class="trade-type-label flex items-center gap-2"><i class="fas fa-arrow-trend-up text-green-400"></i> לונג</label>
+                            <input type="radio" id="trade-type-short" name="trade-type" value="short" class="trade-type-input">
+                            <label for="trade-type-short" class="trade-type-label flex items-center gap-2"><i class="fas fa-arrow-trend-down text-red-400"></i> שורט</label>
+                        </div>
+                    </div>
                     <form id="trade-form" autocomplete="off" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div><label for="trade-date" class="block text-sm font-medium mb-1">תאריך</label><input type="date" id="trade-date" class="input-field w-full" required></div>
                         <div><label for="trade-ticker" class="block text-sm font-medium mb-1">טיקר מניה</label><input type="text" id="trade-ticker" placeholder="לדוגמה: MSFT" class="input-field w-full" required oninput="this.value = this.value.toUpperCase()"></div>
@@ -155,7 +151,7 @@
 
         <div id="summary-section" class="hidden card">
             <h2 class="text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-500">סיכום וניתוח</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8 mb-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div class="card text-center bg-gray-800 summary-stat"><h3 class="text-lg font-semibold text-gray-400 mb-2">סה"כ רווח/הפסד</h3><p id="total-pl" class="font-bold"></p></div>
                 <div class="card text-center bg-gray-800 summary-stat"><h3 class="text-lg font-semibold text-gray-400 mb-2">עסקאות סגורות</h3><p id="total-trades" class="font-bold text-orange-600"></p></div>
                 <div class="card text-center bg-gray-800 summary-stat"><h3 class="text-lg font-semibold text-gray-400 mb-2">אחוז הצלחה</h3><p id="win-rate" class="font-bold text-orange-600"></p></div>
@@ -209,42 +205,18 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // --- Maintenance Mode Check ---
-        const checkMaintenanceMode = async () => {
-            try {
-                const maintenanceRef = doc(db, "config", "maintenance");
-                const docSnap = await getDoc(maintenanceRef);
-                if (docSnap.exists() && docSnap.data().isUnderMaintenance) {
-                    const maintenanceOverlay = document.getElementById('maintenance-overlay');
-                    const maintenanceMessage = document.getElementById('maintenance-message');
-                    if (docSnap.data().message) {
-                        maintenanceMessage.textContent = docSnap.data().message;
-                    }
-                    maintenanceOverlay.classList.remove('hidden');
-                    return true; // Maintenance mode is ON
-                }
-            } catch (error) {
-                console.error("Error checking maintenance mode:", error);
-            }
-            return false; // Maintenance mode is OFF
-        };
-
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            const isMaintenance = await checkMaintenanceMode();
-            if (isMaintenance) return; // Stop app initialization if in maintenance mode
-
+        document.addEventListener('DOMContentLoaded', () => {
             // --- Global State ---
             let trades = [];
             let transactions = [];
             let currentUser = null;
             let tradesUnsubscribe = null;
             let transactionsUnsubscribe = null;
-            let settingsUnsubscribe = null; // Listener for settings
+            let settingsUnsubscribe = null;
             let isRegisterMode = false;
             let livePrices = {};
             let liveDataInterval = null;
-            let apiKey = ''; // Initialize as empty, will be fetched from Firestore
+            let apiKey = '';
 
             // --- DOM Elements ---
             const authOverlay = document.getElementById('auth-overlay');
@@ -273,22 +245,6 @@
 
             // --- Helper Functions ---
             const getTodaysDate = () => new Date().toISOString().split('T')[0];
-            
-            const adjustSummaryFontSizes = () => {
-                const elements = document.querySelectorAll('.summary-stat p');
-                elements.forEach(el => {
-                    setTimeout(() => {
-                        el.style.fontSize = ''; 
-                        const style = window.getComputedStyle(el, null);
-                        let fontSize = parseFloat(style.getPropertyValue('font-size'));
-                        while (el.scrollWidth > el.clientWidth && fontSize > 10) {
-                            fontSize--;
-                            el.style.fontSize = fontSize + 'px';
-                        }
-                    }, 0);
-                });
-            };
-
             const showMessage = (text, duration = 4000) => {
                 messageModal.innerHTML = `<div class="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-lg text-center"><p class="text-lg font-semibold mb-4 text-white">${text}</p><button id="close-modal-btn" class="btn-primary px-4 py-2 rounded-lg">סגור</button></div>`;
                 messageModal.classList.remove('hidden');
@@ -306,35 +262,68 @@
                 const pl = calculateTotalPL(trade);
                 const plDisplay = pl !== null ? pl.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : 'פתוחה';
                 const plClass = pl !== null ? (pl >= 0 ? 'pl-positive' : 'pl-negative') : 'pl-open';
-                const modalContent = `<div class="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-lg text-white"><h3 class="text-xl font-bold mb-4 text-center text-orange-400">פרטי עסקה: ${trade.ticker}</h3><div class="space-y-2 text-right"><p><strong>תאריך:</strong> ${new Date(trade.date).toLocaleDateString('he-IL')}</p><p><strong>כמות:</strong> ${trade.quantity}</p><p><strong>מחיר כניסה:</strong> ${parseFloat(trade.entry).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</p><p><strong>מחיר יציאה:</strong> ${trade.exit ? parseFloat(trade.exit).toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '—'}</p><p><strong>סטופ לוס:</strong> ${trade.stopLoss ? parseFloat(trade.stopLoss).toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '—'}</p><p><strong>רווח/הפסד:</strong> <span class="${plClass} font-bold">${plDisplay}</span></p></div><button id="close-modal-btn" class="mt-6 w-full btn-primary px-4 py-2 rounded-lg">סגור</button></div>`;
+                const modalContent = `<div class="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-lg text-white"><h3 class="text-xl font-bold mb-4 text-center text-orange-400">פרטי עסקה: ${trade.ticker}</h3><div class="space-y-2 text-right"><p><strong>סוג:</strong> <span class="${trade.type === 'long' ? 'text-green-400' : 'text-red-400'}">${trade.type === 'long' ? 'לונג' : 'שורט'}</span></p><p><strong>תאריך:</strong> ${new Date(trade.date).toLocaleDateString('he-IL')}</p><p><strong>כמות:</strong> ${trade.quantity}</p><p><strong>מחיר כניסה:</strong> ${parseFloat(trade.entry).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</p><p><strong>מחיר יציאה:</strong> ${trade.exit ? parseFloat(trade.exit).toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '—'}</p><p><strong>רווח/הפסד:</strong> <span class="${plClass} font-bold">${plDisplay}</span></p></div><button id="close-modal-btn" class="mt-6 w-full btn-primary px-4 py-2 rounded-lg">סגור</button></div>`;
                 messageModal.innerHTML = modalContent;
                 messageModal.classList.remove('hidden');
                 document.getElementById('close-modal-btn').addEventListener('click', () => messageModal.classList.add('hidden'));
             };
             
             // --- Core Logic (Calculations) ---
-            const calculateTotalPL = (trade) => { 
-                if (trade.exit === null || trade.exit === undefined || trade.exit === '') return null;
-                return (parseFloat(trade.exit) - parseFloat(trade.entry)) * parseFloat(trade.quantity);
-            };
-            const calculatePortfolioValue = () => {
-                const baseBalance = transactions.reduce((acc, t) => t.type === 'deposit' ? acc + t.amount : acc - t.amount, 0);
-                const costBasisOfAllTrades = trades.reduce((sum, t) => sum + (t.entry * t.quantity), 0);
-                const proceedsOfClosedTrades = trades.filter(t => t.exit).reduce((sum, t) => sum + (t.exit * t.quantity), 0);
-                const cash = baseBalance - costBasisOfAllTrades + proceedsOfClosedTrades;
-                const openTrades = trades.filter(t => !t.exit);
-                const marketValueOfHoldings = openTrades.reduce((sum, t) => {
-                    const price = livePrices[t.ticker] || t.entry;
-                    return sum + (price * t.quantity);
-                }, 0);
-                return cash + marketValueOfHoldings;
+            const calculateTotalPL = (trade) => {
+                if (trade.exit === null || trade.exit === undefined || trade.exit === '') {
+                    return null;
+                }
+                const entry = parseFloat(trade.entry);
+                const exit = parseFloat(trade.exit);
+                const quantity = parseFloat(trade.quantity);
+                if (trade.type === 'long') {
+                    return (exit - entry) * quantity;
+                } else if (trade.type === 'short') {
+                    return (entry - exit) * quantity;
+                }
+                return (exit - entry) * quantity; // Fallback for old trades without a type
             };
 
-            // --- Live Data & Stop-Loss Check ---
+            const calculatePortfolioValue = () => {
+                const initialCapital = transactions.reduce((acc, t) => t.type === 'deposit' ? acc + t.amount : acc - t.amount, 0);
+                const realizedPL = trades.filter(t => t.exit).reduce((sum, t) => sum + calculateTotalPL(t), 0);
+                const unrealizedPL = trades.filter(t => !t.exit).reduce((sum, t) => {
+                    const livePrice = livePrices[t.ticker] || t.entry;
+                    const tempClosedTrade = { ...t, exit: livePrice };
+                    return sum + calculateTotalPL(tempClosedTrade);
+                }, 0);
+                return initialCapital + realizedPL + unrealizedPL;
+            };
+
+            // --- Live Data & Stop Loss ---
+            const checkAndCloseStoppedTrades = (ticker, livePrice) => {
+                if (!currentUser) return;
+                const openTradesForTicker = trades.filter(t => t.ticker === ticker && !t.exit && t.stopLoss);
+
+                openTradesForTicker.forEach(trade => {
+                    const stopLoss = parseFloat(trade.stopLoss);
+                    let triggered = false;
+                    if (trade.type === 'long' && livePrice <= stopLoss) {
+                        triggered = true;
+                    } else if (trade.type === 'short' && livePrice >= stopLoss) {
+                        triggered = true;
+                    }
+
+                    if (triggered) {
+                        console.log(`Stop loss triggered for ${trade.ticker} at ${stopLoss}`);
+                        const tradeRef = doc(db, "users", currentUser.uid, "trades", trade.id);
+                        updateDoc(tradeRef, {
+                            exit: stopLoss,
+                            notes: (trade.notes || '') + `\n(נסגרה אוטומטית ע"י סטופ לוס ב-${new Date().toLocaleString('he-IL')})`
+                        }).catch(e => console.error("Error closing trade by SL:", e));
+                    }
+                });
+            };
+
             const fetchLivePrices = async () => {
-                if (!apiKey || !currentUser) return;
-                const openTradesWithSL = trades.filter(t => !t.exit && t.stopLoss);
-                const uniqueTickers = [...new Set(trades.filter(t => !t.exit).map(t => t.ticker))];
+                if (!apiKey) return;
+                const openTrades = trades.filter(t => !t.exit);
+                const uniqueTickers = [...new Set(openTrades.map(t => t.ticker))];
                 if (uniqueTickers.length === 0) return;
 
                 let pricesUpdated = false;
@@ -346,19 +335,7 @@
                         if (data.c) {
                             livePrices[ticker] = data.c;
                             pricesUpdated = true;
-                            // Check for Stop-Loss trigger
-                            const tradesToCheck = openTradesWithSL.filter(t => t.ticker === ticker);
-                            for (const trade of tradesToCheck) {
-                                if (data.c <= trade.stopLoss) {
-                                    console.log(`Stop-loss triggered for ${trade.ticker} at $${data.c}`);
-                                    const tradeRef = doc(db, "users", currentUser.uid, "trades", trade.id);
-                                    await updateDoc(tradeRef, {
-                                        exit: trade.stopLoss,
-                                        notes: (trade.notes || '') + `\nנסגר אוטומטית על ידי סטופ-לוס במחיר ${trade.stopLoss}.`
-                                    });
-                                    showMessage(`עסקה ${trade.ticker} נסגרה אוטומטית במחיר הסטופ-לוס.`, 5000);
-                                }
-                            }
+                            checkAndCloseStoppedTrades(ticker, data.c);
                         }
                     } catch (error) {
                         console.error("Finnhub API Error:", error);
@@ -368,11 +345,12 @@
                     updateUIWithLiveData();
                 }
             };
+
             const startLiveData = () => {
                 if (liveDataInterval) clearInterval(liveDataInterval);
                 if (apiKey) {
-                    fetchLivePrices(); 
-                    liveDataInterval = setInterval(fetchLivePrices, 60000); // Check every minute
+                    fetchLivePrices();
+                    liveDataInterval = setInterval(fetchLivePrices, 60000);
                 }
             };
             const stopLiveData = () => {
@@ -419,15 +397,19 @@
                     const pl = calculateTotalPL(trade);
                     let livePLContent = '';
                     if (pl === null && apiKey && livePrices[trade.ticker]) {
-                        const livePL = (livePrices[trade.ticker] - trade.entry) * trade.quantity;
+                        const livePrice = livePrices[trade.ticker];
+                        const tempClosedTrade = { ...trade, exit: livePrice };
+                        const livePL = calculateTotalPL(tempClosedTrade);
                         const livePLClass = livePL >= 0 ? 'pl-positive' : 'pl-negative';
-                        livePLContent = `<div class="col-span-2"><span class="font-semibold">רווח/הפסד נוכחי: </span><span class="${livePLClass} font-bold">${livePL.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span></div>`;
+                        livePLContent = `<div class="col-span-2 grid grid-cols-2"><div><span class="font-semibold">רווח/הפסד נוכחי: </span><span class="${livePLClass} font-bold">${livePL.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span></div><div><span class="font-semibold">מחיר נוכחי: </span><span class="text-gray-300 font-bold">$${livePrice.toFixed(2)}</span></div></div>`;
                     }
                     const plDisplay = pl !== null ? pl.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : 'פתוחה';
                     const plClass = pl !== null ? (pl >= 0 ? 'pl-positive' : 'pl-negative') : 'pl-open';
+                    const tradeTypeClass = trade.type === 'long' ? 'text-green-400' : 'text-red-400';
+                    const tradeTypeIcon = trade.type === 'long' ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
                     const el = document.createElement('div');
                     el.className = 'card p-4';
-                    el.innerHTML = `<div class="flex justify-between items-start mb-2"><div><span class="text-xl font-bold">${trade.ticker}</span><span class="text-sm text-gray-400 block">${new Date(trade.date).toLocaleDateString('he-IL')}</span></div><div class="flex items-center space-x-2"><button data-id="${trade.id}" class="edit-trade-btn btn-icon"><i class="fas fa-edit btn-edit-icon"></i></button><button data-id="${trade.id}" class="delete-trade-btn btn-icon"><i class="fas fa-trash-alt btn-delete-icon"></i></button></div></div><div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300"><div><span class="font-semibold">כניסה:</span> $${parseFloat(trade.entry).toFixed(2)}</div><div><span class="font-semibold">יציאה:</span> ${trade.exit ? `$${parseFloat(trade.exit).toFixed(2)}` : '—'}</div><div><span class="font-semibold">כמות:</span> ${trade.quantity}</div>${trade.stopLoss ? `<div><span class="font-semibold">סטופ לוס:</span> $${parseFloat(trade.stopLoss).toFixed(2)}</div>` : ''}<div class="col-span-2"><span class="font-semibold">רווח/הפסד סגור: </span><span class="${plClass} font-bold">${plDisplay}</span></div>${livePLContent}${trade.reason ? `<div class="col-span-2"><span class="font-semibold">סיבה:</span> ${trade.reason}</div>` : ''}${trade.notes ? `<div class="col-span-2"><span class="font-semibold">הערות:</span> ${trade.notes}</div>` : ''}</div>`;
+                    el.innerHTML = `<div class="flex justify-between items-start mb-2"><div><span class="text-xl font-bold">${trade.ticker}</span><span class="text-sm text-gray-400 block">${new Date(trade.date).toLocaleDateString('he-IL')}</span></div><div class="flex items-center space-x-2"><span class="flex items-center gap-2 text-sm font-bold ${tradeTypeClass}"><i class="fas ${tradeTypeIcon}"></i> ${trade.type === 'long' ? 'לונג' : 'שורט'}</span><button data-id="${trade.id}" class="edit-trade-btn btn-icon"><i class="fas fa-edit btn-edit-icon"></i></button><button data-id="${trade.id}" class="delete-trade-btn btn-icon"><i class="fas fa-trash-alt btn-delete-icon"></i></button></div></div><div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300"><div><span class="font-semibold">כניסה:</span> $${parseFloat(trade.entry).toFixed(2)}</div><div><span class="font-semibold">יציאה:</span> ${trade.exit ? `$${parseFloat(trade.exit).toFixed(2)}` : '—'}</div><div><span class="font-semibold">כמות:</span> ${trade.quantity}</div>${trade.stopLoss ? `<div><span class="font-semibold">סטופ לוס:</span> $${parseFloat(trade.stopLoss).toFixed(2)}</div>` : ''}<div class="col-span-2"><span class="font-semibold">רווח/הפסד סגור: </span><span class="${plClass} font-bold">${plDisplay}</span></div>${livePLContent}${trade.reason ? `<div class="col-span-2"><span class="font-semibold">סיבה:</span> ${trade.reason}</div>` : ''}${trade.notes ? `<div class="col-span-2 whitespace-pre-wrap"><span class="font-semibold">הערות:</span> ${trade.notes}</div>` : ''}</div>`;
                     tradesList.appendChild(el);
                 });
             };
@@ -446,7 +428,6 @@
                 document.getElementById('avg-pl').className = `font-bold ${avgPL >= 0 ? 'pl-positive' : 'pl-negative'}`;
                 updateDoughnutChart(winningTrades, totalTradesCount - winningTrades);
                 updateLineChart(closedTrades);
-                adjustSummaryFontSizes();
             };
             const updateDoughnutChart = (wins, losses) => {
                 const ctx = document.getElementById('trades-chart').getContext('2d');
@@ -505,10 +486,7 @@
                         updateUI();
                     });
                 } else {
-                    currentUser = null;
-                    trades = [];
-                    transactions = [];
-                    apiKey = '';
+                    currentUser = null; trades = []; transactions = []; apiKey = '';
                     if (tradesUnsubscribe) tradesUnsubscribe();
                     if (transactionsUnsubscribe) transactionsUnsubscribe();
                     if (settingsUnsubscribe) settingsUnsubscribe();
@@ -540,7 +518,6 @@
                 authError.textContent = '';
                 const email = emailInput.value;
                 const password = passwordInput.value;
-                if (!/^\d{6}$/.test(password)) { authError.textContent = 'הסיסמה חייבת להכיל 6 ספרות בדיוק.'; return; }
                 authBtn.classList.add('hidden');
                 authLoader.classList.remove('hidden');
                 try {
@@ -550,6 +527,7 @@
                     switch (error.code) {
                         case 'auth/email-already-in-use': authError.textContent = 'כתובת אימייל זו כבר בשימוש.'; break;
                         case 'auth/invalid-email': authError.textContent = 'כתובת אימייל לא חוקית.'; break;
+                        case 'auth/weak-password': authError.textContent = 'סיסמה חלשה מדי (נדרשים לפחות 6 תווים).'; break;
                         case 'auth/wrong-password': case 'auth/user-not-found': case 'auth/invalid-credential': authError.textContent = 'אימייל או סיסמה שגויים.'; break;
                         default: authError.textContent = 'אירעה שגיאה. נסה שוב.'; console.error('Auth Error:', error);
                     }
@@ -621,12 +599,13 @@
             tradeForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const newTrade = { 
+                    type: document.querySelector('input[name="trade-type"]:checked').value,
                     date: document.getElementById('trade-date').value, 
                     ticker: document.getElementById('trade-ticker').value.toUpperCase(), 
                     quantity: parseFloat(document.getElementById('trade-quantity').value), 
                     entry: parseFloat(document.getElementById('trade-entry').value), 
-                    exit: document.getElementById('trade-exit').value ? parseFloat(document.getElementById('trade-exit').value) : null,
                     stopLoss: document.getElementById('trade-stop-loss').value ? parseFloat(document.getElementById('trade-stop-loss').value) : null,
+                    exit: document.getElementById('trade-exit').value ? parseFloat(document.getElementById('trade-exit').value) : null, 
                     reason: document.getElementById('trade-reason').value, 
                     notes: document.getElementById('trade-notes').value 
                 };
@@ -650,13 +629,13 @@
                     const id = e.target.closest('.edit-trade-btn').dataset.id;
                     const trade = trades.find(t => t.id === id);
                     if (!trade) return;
-                    editTradeModal.innerHTML = `<div class="bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 shadow-lg text-white"><h3 class="text-xl font-semibold mb-6">ערוך / סגור עסקה: ${trade.ticker}</h3><form id="edit-trade-form" class="space-y-4"><input type="hidden" id="edit-trade-id" value="${trade.id}"><div class="grid grid-cols-2 gap-4"><div><label>תאריך</label><input type="date" id="edit-trade-date" class="input-field w-full" value="${trade.date}" required></div><div><label>טיקר</label><input type="text" id="edit-trade-ticker" class="input-field w-full" value="${trade.ticker}" required oninput="this.value = this.value.toUpperCase()"></div><div><label>כמות</label><input type="number" inputmode="numeric" id="edit-trade-quantity" class="input-field w-full" value="${trade.quantity}" required></div><div><label>מחיר כניסה</label><input type="number" inputmode="decimal" step="0.01" id="edit-trade-entry" class="input-field w-full" value="${trade.entry}" required></div></div><div class="border-t border-gray-600 pt-4 mt-4"><h4 class="font-semibold mb-2">סגירת עסקה</h4><div class="grid grid-cols-2 gap-4"><div><label>סטופ לוס</label><input type="number" inputmode="decimal" step="0.01" id="edit-trade-stop-loss" class="input-field w-full" placeholder="השאר ריק ללא סטופ" value="${trade.stopLoss || ''}"></div><div><label>מחיר יציאה</label><input type="number" inputmode="decimal" step="0.01" id="edit-trade-exit" class="input-field w-full" placeholder="השאר ריק לעסקה פתוחה" value="${trade.exit || ''}"></div></div></div><div class="mt-4"><label>הערות</label><textarea id="edit-trade-notes" class="input-field w-full" rows="2">${trade.notes || ''}</textarea></div><div class="flex justify-end space-x-2 mt-6"><button type="button" id="cancel-edit-trade-btn" class="btn-secondary px-4 py-2 rounded-lg">ביטול</button><button type="submit" class="btn-primary px-4 py-2 rounded-lg">שמור שינויים</button></div></form></div>`;
+                    editTradeModal.innerHTML = `<div class="bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 shadow-lg text-white"><h3 class="text-xl font-semibold mb-6">ערוך / סגור עסקה: ${trade.ticker}</h3><form id="edit-trade-form" class="space-y-4"><input type="hidden" id="edit-trade-id" value="${trade.id}"><div class="grid grid-cols-2 gap-4"><div><label>תאריך</label><input type="date" id="edit-trade-date" class="input-field w-full" value="${trade.date}" required></div><div><label>טיקר</label><input type="text" id="edit-trade-ticker" class="input-field w-full" value="${trade.ticker}" required oninput="this.value = this.value.toUpperCase()"></div><div><label>כמות</label><input type="number" inputmode="numeric" id="edit-trade-quantity" class="input-field w-full" value="${trade.quantity}" required></div><div><label>מחיר כניסה</label><input type="number" inputmode="decimal" step="0.01" id="edit-trade-entry" class="input-field w-full" value="${trade.entry}" required></div><div><label>סטופ לוס</label><input type="number" inputmode="decimal" step="0.01" id="edit-trade-stop-loss" class="input-field w-full" value="${trade.stopLoss || ''}"></div><div><label>מחיר יציאה</label><input type="number" inputmode="decimal" step="0.01" id="edit-trade-exit" class="input-field w-full" placeholder="השאר ריק לעסקה פתוחה" value="${trade.exit || ''}"></div></div><div class="mt-4"><label>הערות</label><textarea id="edit-trade-notes" class="input-field w-full" rows="2">${trade.notes || ''}</textarea></div><div class="flex justify-end space-x-2 mt-6"><button type="button" id="cancel-edit-trade-btn" class="btn-secondary px-4 py-2 rounded-lg">ביטול</button><button type="submit" class="btn-primary px-4 py-2 rounded-lg">שמור שינויים</button></div></form></div>`;
                     editTradeModal.classList.remove('hidden');
                     document.getElementById('cancel-edit-trade-btn').addEventListener('click', () => editTradeModal.classList.add('hidden'));
                     document.getElementById('edit-trade-form').addEventListener('submit', (ev) => {
                         ev.preventDefault();
                         const tradeId = document.getElementById('edit-trade-id').value;
-                        const updatedData = { date: document.getElementById('edit-trade-date').value, ticker: document.getElementById('edit-trade-ticker').value.toUpperCase(), quantity: parseFloat(document.getElementById('edit-trade-quantity').value), entry: parseFloat(document.getElementById('edit-trade-entry').value), exit: document.getElementById('edit-trade-exit').value ? parseFloat(document.getElementById('edit-trade-exit').value) : null, stopLoss: document.getElementById('edit-trade-stop-loss').value ? parseFloat(document.getElementById('edit-trade-stop-loss').value) : null, notes: document.getElementById('edit-trade-notes').value };
+                        const updatedData = { date: document.getElementById('edit-trade-date').value, ticker: document.getElementById('edit-trade-ticker').value.toUpperCase(), quantity: parseFloat(document.getElementById('edit-trade-quantity').value), entry: parseFloat(document.getElementById('edit-trade-entry').value), stopLoss: document.getElementById('edit-trade-stop-loss').value ? parseFloat(document.getElementById('edit-trade-stop-loss').value) : null, exit: document.getElementById('edit-trade-exit').value ? parseFloat(document.getElementById('edit-trade-exit').value) : null, notes: document.getElementById('edit-trade-notes').value };
                         performDbAction(async () => {
                             const tradeRef = doc(db, "users", currentUser.uid, "trades", tradeId);
                             await updateDoc(tradeRef, updatedData);
@@ -672,9 +651,9 @@
                 if (trades.length === 0) { showMessage('אין עסקאות לייצא.'); return; }
                 const tradeDataString = JSON.stringify(trades);
                 const filterControls = `<div id="controls" style="padding: 1rem 2rem; background: #1f2937; border-radius: 0.5rem; margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem; align-items: end;"><div><label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">טיקר</label><input type="text" id="filter-ticker" placeholder="הכל" style="width: 100%; background: #374151; border: 1px solid #4b5563; color: #e2e8f0; border-radius: 0.5rem; padding: 0.5rem;" oninput="this.value = this.value.toUpperCase()"></div><div><label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">מתאריך</label><input type="date" id="start-date" style="width: 100%; background: #374151; border: 1px solid #4b5563; color: #e2e8f0; border-radius: 0.5rem; padding: 0.5rem;"></div><div><label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">עד תאריך</label><input type="date" id="end-date" style="width: 100%; background: #374151; border: 1px solid #4b5563; color: #e2e8f0; border-radius: 0.5rem; padding: 0.5rem;"></div><div><label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">מיין לפי</label><select id="sort-trades" style="width: 100%; background: #374151; border: 1px solid #4b5563; color: #e2e8f0; border-radius: 0.5rem; padding: 0.5rem;"><option value="date-desc">תאריך (חדש לישן)</option><option value="date-asc">תאריך (ישן לחדש)</option></select></div><div><button id="clear-filter-btn" style="width: 100%; padding: 0.5rem; border-radius: 0.5rem; background-color: #4b5563; color: #e2e8f0; border: 1px solid #4b5563; cursor: pointer;">נקה פילטר</button></div></div>`;
-                const scriptContent = `const allTrades = ${tradeDataString}; const tbody = document.getElementById('trades-tbody'); const summaryDiv = document.getElementById('summary'); function calculateTotalPL(trade) { if (trade.exit === null || trade.exit === undefined || trade.exit === '') return null; return (parseFloat(trade.exit) - parseFloat(trade.entry)) * parseFloat(trade.quantity); } function renderTable(tradesToRender) { tbody.innerHTML = ''; tradesToRender.forEach(t => { const pl = calculateTotalPL(t); const indicatorColor = pl !== null ? (pl >= 0 ? '#16a34a' : '#dc2626') : '#facc15'; const indicator = '<span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: ' + indicatorColor + ';"></span>'; const investment = parseFloat(t.entry) * parseFloat(t.quantity); const plPercentage = pl !== null && investment > 0 ? ((pl / investment) * 100).toFixed(2) + '%' : 'N/A'; const row = document.createElement('tr'); row.innerHTML = '<td style="padding: 8px; border: 1px solid #444;">' + indicator + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + new Date(t.date).toLocaleDateString('he-IL') + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + t.ticker + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + t.quantity + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">$' + parseFloat(t.entry).toFixed(2) + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">$' + investment.toFixed(2) + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + (t.exit ? '$' + parseFloat(t.exit).toFixed(2) : 'פתוחה') + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + (pl !== null ? '$' + pl.toFixed(2) : 'N/A') + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + plPercentage + '</td>'; tbody.appendChild(row); }); const closedTrades = tradesToRender.filter(t => calculateTotalPL(t) !== null); const totalPL = closedTrades.reduce((sum, t) => sum + calculateTotalPL(t), 0); const taxAmount = totalPL > 0 ? totalPL * 0.25 : 0; const netPL = totalPL - taxAmount; summaryDiv.innerHTML = '<h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">סיכום (לפי סינון)</h2>' + '<p><strong>סה"כ רווח/הפסד ברוטו:</strong> <span style="color: ' + (totalPL >= 0 ? '#16a34a' : '#dc2626') + ';">$' + totalPL.toFixed(2) + '</span></p>' + '<p><strong>מס לתשלום (25%):</strong> $' + taxAmount.toFixed(2) + '</p>' + '<p><strong>סה"כ רווח/הפסד נטו:</strong> <span style="color: ' + (netPL >= 0 ? '#16a34a' : '#dc2626') + ';">$' + netPL.toFixed(2) + '</span></p>'; } function filterAndSort() { const filterTicker = document.getElementById('filter-ticker').value.toUpperCase(); const startDate = document.getElementById('start-date').value; const endDate = document.getElementById('end-date').value; const sortValue = document.getElementById('sort-trades').value; let filtered = [...allTrades]; if (filterTicker) filtered = filtered.filter(t => t.ticker.toUpperCase().includes(filterTicker)); if (startDate) filtered = filtered.filter(t => t.date >= startDate); if (endDate) filtered = filtered.filter(t => t.date <= endDate); filtered.sort((a, b) => (sortValue === 'date-asc') ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date)); renderTable(filtered); } function clearFilters() { document.getElementById('filter-ticker').value = ''; document.getElementById('start-date').value = ''; document.getElementById('end-date').value = ''; document.getElementById('sort-trades').selectedIndex = 0; filterAndSort(); } document.addEventListener('DOMContentLoaded', () => { renderTable(allTrades); document.getElementById('filter-ticker').addEventListener('input', filterAndSort); document.getElementById('start-date').addEventListener('change', filterAndSort); document.getElementById('end-date').addEventListener('change', filterAndSort); document.getElementById('sort-trades').addEventListener('change', filterAndSort); document.getElementById('clear-filter-btn').addEventListener('click', clearFilters); });`;
+                const scriptContent = `const allTrades = ${tradeDataString}; const tbody = document.getElementById('trades-tbody'); const summaryDiv = document.getElementById('summary'); function calculateTotalPL(trade) { if (trade.exit === null || trade.exit === undefined || trade.exit === '') return null; const pl = (parseFloat(trade.exit) - parseFloat(trade.entry)) * parseFloat(trade.quantity); return trade.type === 'short' ? -pl : pl; } function renderTable(tradesToRender) { tbody.innerHTML = ''; tradesToRender.forEach(t => { const pl = calculateTotalPL(t); const indicatorColor = pl !== null ? (pl >= 0 ? '#16a34a' : '#dc2626') : '#facc15'; const indicator = '<span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: ' + indicatorColor + ';"></span>'; const investment = parseFloat(t.entry) * parseFloat(t.quantity); const plPercentage = pl !== null && investment > 0 ? ((pl / investment) * 100).toFixed(2) + '%' : 'N/A'; const row = document.createElement('tr'); row.innerHTML = '<td style="padding: 8px; border: 1px solid #444;">' + indicator + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + new Date(t.date).toLocaleDateString('he-IL') + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + t.ticker + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + (t.type === 'long' ? 'לונג' : 'שורט') + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + t.quantity + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">$' + parseFloat(t.entry).toFixed(2) + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">$' + investment.toFixed(2) + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + (t.exit ? '$' + parseFloat(t.exit).toFixed(2) : 'פתוחה') + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + (pl !== null ? '$' + pl.toFixed(2) : 'N/A') + '</td>' + '<td style="padding: 8px; border: 1px solid #444;">' + plPercentage + '</td>'; tbody.appendChild(row); }); const closedTrades = tradesToRender.filter(t => calculateTotalPL(t) !== null); const totalPL = closedTrades.reduce((sum, t) => sum + calculateTotalPL(t), 0); const taxAmount = totalPL > 0 ? totalPL * 0.25 : 0; const netPL = totalPL - taxAmount; summaryDiv.innerHTML = '<h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">סיכום (לפי סינון)</h2>' + '<p><strong>סה\\"כ רווח/הפסד ברוטו:</strong> <span style="color: ' + (totalPL >= 0 ? '#16a34a' : '#dc2626') + ';">$' + totalPL.toFixed(2) + '</span></p>' + '<p><strong>מס לתשלום (25%):</strong> $' + taxAmount.toFixed(2) + '</p>' + '<p><strong>סה\\"כ רווח/הפסד נטו:</strong> <span style="color: ' + (netPL >= 0 ? '#16a34a' : '#dc2626') + ';">$' + netPL.toFixed(2) + '</span></p>'; } function filterAndSort() { const filterTicker = document.getElementById('filter-ticker').value.toUpperCase(); const startDate = document.getElementById('start-date').value; const endDate = document.getElementById('end-date').value; const sortValue = document.getElementById('sort-trades').value; let filtered = [...allTrades]; if (filterTicker) filtered = filtered.filter(t => t.ticker.toUpperCase().includes(filterTicker)); if (startDate) filtered = filtered.filter(t => t.date >= startDate); if (endDate) filtered = filtered.filter(t => t.date <= endDate); filtered.sort((a, b) => (sortValue === 'date-asc') ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date)); renderTable(filtered); } function clearFilters() { document.getElementById('filter-ticker').value = ''; document.getElementById('start-date').value = ''; document.getElementById('end-date').value = ''; document.getElementById('sort-trades').selectedIndex = 0; filterAndSort(); } document.addEventListener('DOMContentLoaded', () => { renderTable(allTrades); document.getElementById('filter-ticker').addEventListener('input', filterAndSort); document.getElementById('start-date').addEventListener('change', filterAndSort); document.getElementById('end-date').addEventListener('change', filterAndSort); document.getElementById('sort-trades').addEventListener('change', filterAndSort); document.getElementById('clear-filter-btn').addEventListener('click', clearFilters); });`;
                 const script = `<script>${scriptContent}<\/script>`;
-                const headers = ['סטטוס', 'תאריך', 'טיקר', 'כמות', 'מחיר כניסה', 'סה"כ השקעה ($)', 'מחיר יציאה', 'רווח/הפסד ($)', 'רווח/הפסד (%)'];
+                const headers = ['סטטוס', 'תאריך', 'טיקר', 'סוג', 'כמות', 'מחיר כניסה', 'סה"כ השקעה ($)', 'מחיר יציאה', 'רווח/הפסד ($)', 'רווח/הפסד (%)'];
                 const headerHtml = headers.map(h => `<th style="padding: 8px; border: 1px solid #444;">${h}</th>`).join('');
                 const summaryHtml = `<div id="summary" style="margin-top: 2rem; padding: 1.5rem; background: #1f2937; border-radius: 0.5rem;"></div>`;
                 const buttons = `<div style="position: fixed; top: 1rem; left: 1rem; display: flex; gap: 0.5rem; z-index: 100;"><button onclick="window.print()" style="padding: 0.5rem 1rem; background: #fb923c; color: #111827; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: bold;">הדפס / שמור כ-PDF</button></div>`;
@@ -727,7 +706,6 @@
             setupCollapsible('toggle-trades-btn', 'trades-content', 'trades-arrow');
             transactionDateInput.value = getTodaysDate();
             document.getElementById('trade-date').value = getTodaysDate();
-            window.addEventListener('resize', adjustSummaryFontSizes);
             onAuthStateChanged(auth, handleAuthStateChange);
         });
     </script>
