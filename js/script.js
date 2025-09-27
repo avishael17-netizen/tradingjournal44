@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---------------------------------
     let trades = [], transactions = [], currentUser = null, tradesUnsubscribe = null, transactionsUnsubscribe = null, settingsUnsubscribe = null, isRegisterMode = false, livePrices = {}, liveDataInterval = null;
     let userSettings = { apiKey: '', broker: 'none' };
+    let chartMode = 'realized'; // 'realized' or 'equity'
+    let cameFromSummary = false;
     const liveDataIntervalTime = 60000;
     let currentFilters = { ticker: '', startDate: '', endDate: '', sort: 'date-desc', plStatus: 'all' };
     let doughnutChart, lineChart;
@@ -31,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const authOverlay = $('auth-overlay'), appContainer = $('app-container'), authForm = $('auth-form'), emailInput = $('email-input'), passwordInput = $('password-input'), authBtn = $('auth-btn'), authLoader = $('auth-loader'), authError = $('auth-error'), authControls = $('auth-controls'), userGreeting = $('user-greeting'), authTitle = $('auth-title'), authSwitchText = $('auth-switch-text'), forgotPasswordLink = $('forgot-password'), portfolioValueEl = $('portfolio-value'), cashAvailableEl = $('cash-available'), stocksValueEl = $('stocks-value'), yearlyTaxEstimateEl = $('yearly-tax-estimate'), taxInfoBtn = $('tax-info-btn'), depositBtn = $('deposit-btn'), withdrawBtn = $('withdraw-btn'), transactionDateInput = $('transaction-date'), transactionAmountInput = $('transaction-amount'), transactionsHistoryList = $('transactions-history-list'), noTransactionsMessage = $('no-transactions-message'), tradeForm = $('trade-form'), tradesList = $('trades-list'), noTradesMessage = $('no-trades-message'), exportTradesBtn = $('export-trades-btn'), exportTransactionsBtn = $('export-transactions-btn'), messageModal = $('message-modal'), editTradeModal = $('edit-trade-modal'), confirmModal = $('confirm-modal'), resetPasswordModal = $('reset-password-modal'), settingsModal = $('settings-modal'), taxInfoModal = $('tax-info-modal'), filterTradesModal = $('filter-trades-modal'), filterTradesBtn = $('filter-trades-btn'), tradesListModal = $('trades-list-modal'), summaryModal = $('summary-modal'), openTradesModalBtn = $('open-trades-modal-btn'), openSummaryModalBtn = $('open-summary-modal-btn'), closeTradesModalBtn = $('close-trades-modal-btn'), closeSummaryModalBtn = $('close-summary-modal-btn');
     const loadingGreeting = $('loading-greeting'), lastLoginText = $('last-login-text'), totalDepositsEl = $('total-deposits');
     const commissionInputContainer = $('commission-input-container');
+    const tradeDetailsModal = $('trade-details-modal');
 
     // ---------------------------------
     //  UTILITY FUNCTIONS
@@ -55,7 +58,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     const showConfirmation = (message, onConfirm) => { confirmModal.innerHTML = `<div class="card text-center p-8 w-full max-w-sm"><p class="text-lg font-semibold mb-6 text-white">${message}</p><div class="flex justify-center gap-4"><button id="confirm-cancel-btn" class="btn-secondary px-6 py-2">ביטול</button><button id="confirm-ok-btn" class="btn-primary bg-red-600 hover:bg-red-700 text-white px-6 py-2">אישור</button></div></div>`; confirmModal.classList.remove('hidden'); $('confirm-ok-btn').onclick = () => { onConfirm(); confirmModal.classList.add('hidden'); }; $('confirm-cancel-btn').onclick = () => confirmModal.classList.add('hidden'); };
-    const showTradeDetailsModal = (trade) => { const pl = calculateTotalPL(trade); const plDisplay = pl !== null ? formatCurrency(pl) : 'פתוחה'; const plClass = pl !== null ? (pl >= 0 ? 'pl-positive' : 'pl-negative') : 'pl-open'; const tradeType = trade.type || 'long'; const modalContent = `<div class="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-lg text-white"><h3 class="text-xl font-bold mb-4 text-center text-orange-400">פרטי עסקה: ${trade.ticker}</h3><div class="space-y-2 text-right"><p><strong>סוג:</strong> <span class="${tradeType === 'long' ? 'text-green-400' : 'text-red-400'}">${tradeType === 'long' ? 'לונג' : 'שורט'}</span></p><p><strong>תאריך:</strong> ${new Date(trade.date).toLocaleDateString('he-IL')}</p><p><strong>כמות:</strong> ${trade.quantity}</p><p><strong>מחיר כניסה:</strong> ${formatCurrency(trade.entry)}</p><p><strong>מחיר יציאה:</strong> ${trade.exit ? formatCurrency(trade.exit) : '—'}</p><p><strong>עמלה:</strong> ${trade.commission ? formatCurrency(trade.commission) : '—'}</p><p><strong>רווח/הפסד:</strong> <span class="${plClass} font-bold">${plDisplay}</span></p></div><button id="close-modal-btn" class="mt-6 w-full btn-primary px-4 py-2 rounded-lg">סגור</button></div>`; messageModal.innerHTML = modalContent; messageModal.classList.remove('hidden'); $('close-modal-btn').addEventListener('click', () => messageModal.classList.add('hidden')); };
+    
+    const showTradeDetailsModal = (trade) => { 
+        const pl = calculateTotalPL(trade); 
+        const plDisplay = pl !== null ? formatCurrency(pl) : 'פתוחה'; 
+        const plClass = pl !== null ? (pl >= 0 ? 'pl-positive' : 'pl-negative') : 'pl-open'; 
+        const tradeType = trade.type || 'long'; 
+        const modalContent = `<div class="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-lg text-white"><h3 class="text-xl font-bold mb-4 text-center text-orange-400">פרטי עסקה: ${trade.ticker}</h3><div class="space-y-2 text-right"><p><strong>סוג:</strong> <span class="${tradeType === 'long' ? 'text-green-400' : 'text-red-400'}">${tradeType === 'long' ? 'לונג' : 'שורט'}</span></p><p><strong>תאריך:</strong> ${new Date(trade.date).toLocaleDateString('he-IL')}</p><p><strong>כמות:</strong> ${trade.quantity}</p><p><strong>מחיר כניסה:</strong> ${formatCurrency(trade.entry)}</p><p><strong>מחיר יציאה:</strong> ${trade.exit ? formatCurrency(trade.exit) : '—'}</p><p><strong>עמלה:</strong> ${trade.commission ? formatCurrency(trade.commission) : '—'}</p><p><strong>רווח/הפסד:</strong> <span class="${plClass} font-bold">${plDisplay}</span></p></div><button id="close-trade-details-btn" class="mt-6 w-full btn-primary px-4 py-2 rounded-lg">סגור</button></div>`; 
+        tradeDetailsModal.innerHTML = modalContent;
+        tradeDetailsModal.classList.remove('hidden'); 
+        $('close-trade-details-btn').addEventListener('click', () => tradeDetailsModal.classList.add('hidden')); 
+    };
+
+    const closeAllSubMenus = (container) => {
+        const subContents = container.querySelectorAll('.collapsible-content');
+        const subArrows = container.querySelectorAll('.fa-chevron-down');
+        subContents.forEach(content => content.style.maxHeight = '0px');
+        subArrows.forEach(arrow => arrow.classList.remove('rotate-180'));
+    };
     
     const setupCollapsible = (btnId, contentId, arrowId) => { 
         const btn = $(btnId); 
@@ -66,8 +86,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const isCollapsed = !content.style.maxHeight || content.style.maxHeight === '0px'; 
             if (isCollapsed) { 
                 content.style.maxHeight = `${content.scrollHeight}px`;
+                if (content.id === 'main-menu-card-content' && content.scrollHeight > content.clientHeight) {
+                    content.classList.add('is-scrollable');
+                }
+                if (btnId !== 'toggle-main-menu-card-btn') {
+                    setTimeout(() => {
+                        btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                }
             } else { 
                 content.style.maxHeight = '0px';
+                content.classList.remove('is-scrollable');
+                if (content.id === 'main-menu-card-content') {
+                    closeAllSubMenus(content);
+                }
             } 
             if (arrow) arrow.classList.toggle('rotate-180', isCollapsed); 
         }); 
@@ -84,16 +116,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="text-xs text-gray-400 mt-2">הירשם בחינם באתר <a href="https://finnhub.io" target="_blank" class="text-orange-400 underline">Finnhub.io</a> כדי לקבל מפתח API.</p>${statusHtml}
             </div>
             <div class="border-t border-gray-700 pt-6">
-                 <h4 class="text-lg font-semibold text-gray-200 mb-3">ניהול עמלות</h4>
-                 <label for="broker-select" class="block text-sm font-medium">הברוקר שלך</label>
-                 <div class="flex items-center gap-3">
-                     <select id="broker-select" class="select-field w-full">
+                <h4 class="text-lg font-semibold text-gray-200 mb-3">ניהול עמלות</h4>
+                <label for="broker-select" class="block text-sm font-medium">הברוקר שלך</label>
+                <div class="flex items-center gap-3">
+                    <select id="broker-select" class="select-field w-full">
                         <option value="none">ללא (הזנה ידנית)</option>
                         <option value="blink">Blink</option>
-                     </select>
-                     <button type="button" id="broker-info-btn" class="btn-icon flex-shrink-0"><i class="fas fa-info-circle text-lg"></i></button>
-                 </div>
-                 <p class="text-xs text-gray-400 mt-2">בחירת ברוקר תפעיל חישוב עמלות אוטומטי בהתאם לתנאים שלו.</p>
+                    </select>
+                    <button type="button" id="broker-info-btn" class="btn-icon flex-shrink-0"><i class="fas fa-info-circle text-lg"></i></button>
+                </div>
+                <p class="text-xs text-gray-400 mt-2">בחירת ברוקר תפעיל חישוב עמלות אוטומטי בהתאם לתנאים שלו.</p>
             </div>
             <div class="flex justify-end gap-4 mt-6"><button type="button" id="cancel-settings" class="btn-secondary px-6 py-2">ביטול</button><button type="submit" class="btn-primary px-6 py-2">שמור</button></div>
         </form></div>`;
@@ -180,7 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---------------------------------
     //  CORE LOGIC & CALCULATIONS
     // ---------------------------------
-    const calculateTotalPL = (trade) => { if (trade.exit === null || trade.exit === undefined || trade.exit === '') return null; const entry = parseFloat(trade.entry), exit = parseFloat(trade.exit), quantity = parseFloat(trade.quantity), commission = parseFloat(trade.commission) || 0; if(isNaN(entry) || isNaN(exit) || isNaN(quantity)) return null; const grossPL = (trade.type || 'long') === 'long' ? (exit - entry) * quantity : (entry - exit) * quantity; return grossPL - commission; };
+    const calculateTotalPL = (trade) => { 
+        if (trade.exit === null || trade.exit === undefined || trade.exit === '') return null; 
+        const entry = parseFloat(trade.entry), exit = parseFloat(trade.exit), quantity = parseFloat(trade.quantity), commission = parseFloat(trade.commission) || 0; 
+        if(isNaN(entry) || isNaN(exit) || isNaN(quantity)) return null; 
+        const grossPL = (trade.type || 'long') === 'long' ? (exit - entry) * quantity : (entry - exit) * quantity; 
+        const netPL = grossPL - commission;
+        return parseFloat(netPL.toFixed(2));
+    };
     const calculatePortfolioValue = () => { const initialCapital = transactions.reduce((acc, t) => t.type === 'deposit' ? acc + t.amount : acc - t.amount, 0); const realizedPL = trades.filter(t => t.exit).reduce((sum, t) => sum + calculateTotalPL(t), 0); const unrealizedPL = trades.filter(t => !t.exit).reduce((sum, t) => { const tempClosedTrade = { ...t, exit: livePrices[t.ticker] || t.entry }; return sum + calculateTotalPL(tempClosedTrade); }, 0); return initialCapital + realizedPL + unrealizedPL; };
     const calculateCashAvailable = () => { const initialCapital = transactions.reduce((acc, t) => t.type === 'deposit' ? acc + t.amount : acc - t.amount, 0); const realizedPL = trades.filter(t => t.exit).reduce((sum, t) => sum + calculateTotalPL(t), 0); const investedInOpenTrades = trades.filter(t => !t.exit).reduce((sum, t) => sum + (t.entry * t.quantity), 0); const { taxEstimate } = calculateYearlyTax(); return initialCapital + realizedPL - investedInOpenTrades - taxEstimate; };
     const calculateStocksValue = () => trades.filter(t => !t.exit).reduce((sum, t) => sum + ((livePrices[t.ticker] || t.entry) * t.quantity), 0);
@@ -203,31 +242,139 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderTransactions = () => { const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)); transactionsHistoryList.innerHTML = ''; noTransactionsMessage.classList.toggle('hidden', sorted.length > 0); sorted.forEach(t => { const isDeposit = t.type === 'deposit'; const el = document.createElement('div'); el.className = `flex justify-between items-center p-2 rounded-lg ${isDeposit ? 'bg-green-900/50' : 'bg-red-900/50'}`; el.innerHTML = `<div><p class="font-bold ${isDeposit ? 'text-green-400' : 'text-red-400'}">${isDeposit ? 'הפקדה' : 'משיכה'}: ${formatCurrency(t.amount)}</p><p class="text-xs text-gray-400">${new Date(t.date).toLocaleDateString('he-IL')}</p></div><div class="flex space-x-2"><button data-id="${t.id}" class="delete-transaction-btn btn-icon w-8 h-8"><i class="fas fa-trash-alt btn-delete-icon"></i></button></div>`; transactionsHistoryList.appendChild(el); }); };
     const renderYearlyTaxSummary = () => { const taxData = calculateYearlyTax(); $('tax-summary-year').textContent = `סיכום מס לשנת ${new Date().getFullYear()}`; $('yearly-tax-gains').textContent = formatCurrency(taxData.totalGains); $('yearly-tax-losses').textContent = formatCurrency(taxData.totalLosses * -1); const netPlEl = $('yearly-tax-net-pl'); netPlEl.textContent = formatCurrency(taxData.netPL); netPlEl.className = `text-xl font-bold ${taxData.netPL >= 0 ? 'pl-positive' : 'pl-negative'}`; $('yearly-tax-due').textContent = formatCurrency(taxData.taxEstimate); };
     const renderTrades = () => { const filtered = getFilteredTrades(); tradesList.innerHTML = ''; noTradesMessage.classList.toggle('hidden', filtered.length > 0); filtered.forEach(t => { const pl = calculateTotalPL(t); let livePLContent = ''; let percentDisplay = ''; if (pl !== null && t.entry > 0) { const grossInvestment = t.entry * t.quantity; const percent = (pl / grossInvestment) * 100; const percentClass = percent >= 0 ? 'pl-positive' : 'pl-negative'; percentDisplay = ` (<span class="${percentClass} font-normal">${percent.toFixed(2)}%</span>)`; } if (pl === null && userSettings.apiKey && livePrices[t.ticker]) { const livePrice = livePrices[t.ticker]; const livePL = calculateTotalPL({ ...t, exit: livePrice }); let livePercent = 0; if (t.entry > 0) { const grossInvestment = t.entry * t.quantity; livePercent = (livePL / grossInvestment) * 100; } const livePercentClass = livePercent >= 0 ? 'pl-positive' : 'pl-negative'; livePLContent = `<div class="col-span-2 grid grid-cols-2"><div><span class="font-semibold">מחיר נוכחי: </span><span class="text-gray-300 font-bold">${formatCurrency(livePrice)}</span></div><div><span class="font-semibold">רווח/הפסד נוכחי: </span><span class="${livePL >= 0 ? 'pl-positive' : 'pl-negative'} font-bold">${formatCurrency(livePL)}</span><span class="${livePercentClass} font-normal"> (${livePercent.toFixed(2)}%)</span></div></div>`; } const plDisplay = pl !== null ? formatCurrency(pl) : 'פתוחה'; const plClass = pl !== null ? (pl >= 0 ? 'pl-positive' : 'pl-negative') : 'pl-open'; const type = t.type || 'long', typeClass = type === 'long' ? 'text-green-400' : 'text-red-400', typeIcon = type === 'long' ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'; const el = document.createElement('div'); el.className = 'card p-4'; el.innerHTML = `<div class="flex justify-between items-start mb-2"><div><span class="text-xl font-bold">${t.ticker}</span><span class="text-sm text-gray-400 block">${new Date(t.date).toLocaleDateString('he-IL')}</span></div><div class="flex items-center space-x-2"><span class="flex items-center gap-2 text-sm font-bold ${typeClass}"><i class="fas ${typeIcon}"></i> ${type === 'long' ? 'לונג' : 'שורט'}</span><button data-id="${t.id}" class="edit-trade-btn btn-icon"><i class="fas fa-edit btn-edit-icon"></i></button><button data-id="${t.id}" class="delete-trade-btn btn-icon"><i class="fas fa-trash-alt btn-delete-icon"></i></button></div></div><div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300"><div><span class="font-semibold">כניסה:</span> ${formatCurrency(t.entry)}</div><div><span class="font-semibold">יציאה:</span> ${t.exit ? formatCurrency(t.exit) : '—'}</div><div><span class="font-semibold">כמות:</span> ${t.quantity}</div>${t.stopLoss ? `<div><span class="font-semibold">סטופ לוס:</span> ${formatCurrency(t.stopLoss)}</div>` : ''}<div class="col-span-2"><span class="font-semibold">רווח/הפסד נטו: </span><span class="${plClass} font-bold">${plDisplay}</span>${percentDisplay}</div>${livePLContent}${t.commission > 0 ? `<div class="col-span-2"><span class="font-semibold">עמלה:</span> ${formatCurrency(t.commission)}</div>` : ''}${t.reason ? `<div class="col-span-2"><span class="font-semibold">סיבה:</span> ${t.reason}</div>` : ''}${t.notes ? `<div class="col-span-2 whitespace-pre-wrap"><span class="font-semibold">הערות:</span> ${t.notes}</div>` : ''}</div>`; tradesList.appendChild(el); }); };
-    const renderSummary = () => { const closed = trades.filter(t => calculateTotalPL(t) !== null); const count = closed.length; if (count === 0) {[$('total-pl'), $('total-trades'), $('win-rate'), $('avg-pl')].forEach(el => el.textContent = 'N/A'); return;} const totalPL = closed.reduce((sum, t) => sum + calculateTotalPL(t), 0); const wins = closed.filter(t => calculateTotalPL(t) > 0).length; $('total-pl').textContent = formatCurrency(totalPL); $('total-pl').className = `font-bold ${totalPL >= 0 ? 'pl-positive' : 'pl-negative'}`; $('total-trades').textContent = count; $('win-rate').textContent = `\u200e${((wins / count) * 100).toFixed(1)}%`; $('avg-pl').textContent = formatCurrency(totalPL / count); $('avg-pl').className = `font-bold ${(totalPL / count) >= 0 ? 'pl-positive' : 'pl-negative'}`; updateDoughnutChart(wins, count - wins); updateLineChart(closed); };
-    const updateDoughnutChart = (wins, losses) => { const ctx = $('trades-chart').getContext('2d'); if (doughnutChart) doughnutChart.destroy(); doughnutChart = new Chart(ctx, { type: 'doughnut', data: { labels: ['מנצחות', 'מפסידות'], datasets: [{ data: [wins, losses], backgroundColor: ['#16a34a', '#dc2626'], hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, onClick: (e, els) => { if (els.length > 0) { const segment = els[0].index; currentFilters.plStatus = (segment === 0) ? 'profitable' : 'losing'; summaryModal.classList.remove('open'); tradesListModal.classList.add('open'); renderTrades(); updateClearFilterButtonVisibility(); } }, plugins: { legend: { labels: { color: '#e2e8f0' }}} } }); };
+    const renderSummary = () => { const closed = trades.filter(t => calculateTotalPL(t) !== null); const count = closed.length; if (count === 0) {[$('total-pl'), $('total-trades'), $('win-rate'), $('avg-pl')].forEach(el => el.textContent = 'N/A'); return;} const totalPL = closed.reduce((sum, t) => sum + calculateTotalPL(t), 0); const wins = closed.filter(t => calculateTotalPL(t) > 0).length; $('total-pl').textContent = formatCurrency(totalPL); $('total-pl').className = `font-bold ${totalPL >= 0 ? 'pl-positive' : 'pl-negative'}`; $('total-trades').textContent = count; $('win-rate').textContent = `\u200e${((wins / count) * 100).toFixed(1)}%`; $('avg-pl').textContent = formatCurrency(totalPL / count); $('avg-pl').className = `font-bold ${(totalPL / count) >= 0 ? 'pl-positive' : 'pl-negative'}`; updateDoughnutChart(wins, count - wins); updateLineChart(); };
     
-    const updateLineChart = (closedTrades) => {
-        const ctx = $('cumulative-pl-chart').getContext('2d');
-        const sorted = [...closedTrades].sort((a, b) => new Date(a.exitDate || a.date) - new Date(b.exitDate || b.date));
-        let sum = 0;
-        const points = sorted.map(t => sum += calculateTotalPL(t));
-        if (lineChart) lineChart.destroy();
-        lineChart = new Chart(ctx, {
-            type: 'line',
+       const updateDoughnutChart = (wins, losses) => {
+        const ctx = $('trades-chart').getContext('2d');
+        if (doughnutChart) doughnutChart.destroy();
+        doughnutChart = new Chart(ctx, {
+            type: 'doughnut',
             data: {
-                labels: sorted.map(t => new Date(t.exitDate || t.date).toLocaleDateString('he-IL')),
-                datasets: [{
-                    label: 'רווח/הפסד מצטבר',
-                    data: points,
-                    borderColor: '#fb923c',
-                    tension: 0.1
-                }]
+                labels: ['מנצחות', 'מפסידות'],
+                datasets: [{ data: [wins, losses], backgroundColor: ['#16a34a', '#dc2626'], hoverOffset: 4 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, onClick: (e, els) => { if (els.length > 0) showTradeDetailsModal(sorted[els[0].index]); }, plugins: { legend: { labels: { color: '#e2e8f0' }}, tooltip: { callbacks: { label: (c) => `${c.dataset.label || ''}: ${formatCurrency(c.parsed.y)}` }}}, scales: { y: { ticks: { color: '#e2e8f0' }, grid: { color: 'rgba(255,255,255,0.1)' }}, x: { display: false } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (e, elements) => {
+                    if (elements.length > 0) {
+                        const segmentIndex = elements[0].index;
+                        currentFilters.plStatus = (segmentIndex === 0) ? 'profitable' : 'losing';
+                        cameFromSummary = true;
+                        summaryModal.classList.remove('open');
+                        tradesListModal.classList.add('open');
+                        renderTrades();
+                        updateClearFilterButtonVisibility();
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#e2e8f0' },
+                        onClick: (e, legendItem, legend) => {
+                            const chart = legend.chart;
+                            const index = legendItem.index;
+                            const meta = chart.getDatasetMeta(0);
+
+                            // בודק אם הפריט שנלחץ הוא היחיד שגלוי
+                            const isOnlyOneVisible = meta.data.filter(d => !d.hidden).length === 1 && !meta.data[index].hidden;
+
+                            if (isOnlyOneVisible) {
+                                // אם הוא היחיד, הופך את כולם לגלויים
+                                meta.data.forEach(segment => segment.hidden = false);
+                            } else {
+                                // אחרת, הופך רק את הפריט שנלחץ לגלוי
+                                meta.data.forEach((segment, i) => {
+                                    segment.hidden = i !== index;
+                                });
+                            }
+                            chart.update();
+                        }
+                    }
+                }
+            }
         });
     };
 
-    const updateUI = () => { renderPortfolioValue(); renderTransactions(); renderYearlyTaxSummary(); renderTrades(); updateCommissionInputVisibility(); document.querySelectorAll('.collapsible-content:not(#main-menu-card-content)').forEach(el => { if (el.style.maxHeight && el.style.maxHeight !== '0px') { el.style.maxHeight = `${el.scrollHeight}px`; } }); };
+    
+    const updateLineChart = () => {
+        const ctx = $('cumulative-pl-chart').getContext('2d');
+        if (lineChart) lineChart.destroy();
+
+        let chartData, yAxisLabel;
+
+        if (chartMode === 'equity') {
+            yAxisLabel = "שווי התיק ($)";
+            const closedTrades = trades.filter(t => t.exit);
+            const events = [
+                ...transactions.map(t => ({ ...t, eventType: 'transaction', sortDate: t.date })),
+                ...closedTrades.map(t => ({ ...t, eventType: 'trade', sortDate: (t.exitDate || t.date) }))
+            ].sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
+
+            let equity = 0;
+            const points = [];
+            const labels = [];
+            const eventObjects = [];
+
+            events.forEach(event => {
+                if (event.eventType === 'transaction') {
+                    equity += event.type === 'deposit' ? event.amount : -event.amount;
+                } else {
+                    equity += calculateTotalPL(event);
+                }
+                labels.push(new Date(event.sortDate).toLocaleDateString('he-IL'));
+                points.push(equity);
+                eventObjects.push(event); 
+            });
+            chartData = { labels, points, eventObjects };
+        } else { // 'realized' mode
+            yAxisLabel = "רווח/הפסד מצטבר ($)";
+            const closedTrades = trades.filter(t => t.exit);
+            const sorted = [...closedTrades].sort((a, b) => new Date(a.exitDate || a.date) - new Date(b.exitDate || b.date));
+            let sum = 0;
+            const points = sorted.map(t => sum += calculateTotalPL(t));
+            chartData = {
+                labels: sorted.map(t => new Date(t.exitDate || t.date).toLocaleDateString('he-IL')),
+                points: points,
+                eventObjects: sorted
+            };
+        }
+
+        lineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [{ label: yAxisLabel, data: chartData.points, borderColor: '#fb923c', tension: 0.1 }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                onClick: (e, els) => { 
+                    if (els.length > 0) {
+                        const event = chartData.eventObjects[els[0].index];
+                        if (!event) return;
+                        
+                        if (event.eventType === undefined || event.eventType === 'trade') {
+                            showTradeDetailsModal(event);
+                        } else if (event.eventType === 'transaction') {
+                            const typeText = event.type === 'deposit' ? 'הפקדה' : 'משיכה';
+                            const infoText = `תאריך: ${new Date(event.date).toLocaleDateString('he-IL')}\nסכום: ${formatCurrency(event.amount)}`;
+                            showMessage(`פרטי פעולה: ${typeText}`, infoText, 0);
+                        }
+                    } 
+                }, 
+                plugins: { 
+                    legend: { display: false }, 
+                    tooltip: { callbacks: { label: (c) => `${c.dataset.label || ''}: ${formatCurrency(c.parsed.y)}` }}
+                }, 
+                scales: { 
+                    y: { ticks: { color: '#e2e8f0' }, grid: { color: 'rgba(255,255,255,0.1)' }}, 
+                    x: { display: false } 
+                } 
+            }
+        });
+    };
+
+    const updateUI = () => { renderPortfolioValue(); renderTransactions(); renderYearlyTaxSummary(); renderTrades(); updateCommissionInputVisibility(); };
 
     // ---------------------------------
     //  AUTHENTICATION & DATA SUBSCRIPTION
@@ -240,6 +387,15 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = user;
             loadingOverlay.style.pointerEvents = 'auto'; loadingOverlay.style.opacity = '1';
             authOverlay.classList.add('hidden'); appContainer.classList.add('blurred');
+            
+            const mainMenuContent = $('main-menu-card-content');
+            if (mainMenuContent) {
+                mainMenuContent.style.maxHeight = '0px';
+                mainMenuContent.classList.remove('is-scrollable');
+                const mainMenuArrow = $('main-menu-card-arrow');
+                if (mainMenuArrow) mainMenuArrow.classList.remove('rotate-180');
+                closeAllSubMenus(mainMenuContent);
+            }
 
             const lastLoginISO = localStorage.getItem(`lastLogin_${user.uid}`);
             loadingGreeting.textContent = `שלום, ${user.email.split('@')[0]}`;
@@ -341,7 +497,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const updated = { type: document.querySelector('input[name="edit-trade-type"]:checked').value, date: tradeDetails.date, ticker: $('edit-trade-ticker').value.toUpperCase(), quantity: tradeDetails.quantity, entry: parseFloat($('edit-trade-entry').value), stopLoss: $('edit-trade-stop-loss').value ? parseFloat($('edit-trade-stop-loss').value) : null, exit: exitPrice, exitDate: exitDate, notes: $('edit-trade-notes').value, commission: finalCommission }; 
                 performDbAction(async () => { await updateDoc(doc(db, "users", currentUser.uid, "trades", trade.id), updated); editTradeModal.classList.add('hidden'); showMessage("עדכון עסקה", 'העסקה עודכנה בהצלחה'); }); 
             }; 
-        } 
+        }
+        if(e.target.closest('.chart-toggle-btn')) {
+            const btn = e.target.closest('.chart-toggle-btn');
+            chartMode = btn.id === 'chart-mode-equity' ? 'equity' : 'realized';
+            document.querySelectorAll('.chart-toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateLineChart();
+        }
     });
 
     $('switch-to-register').addEventListener('click', toggleAuthMode);
@@ -361,10 +524,16 @@ document.addEventListener('DOMContentLoaded', () => {
         performDbAction(async () => { await addDoc(collection(db, "users", currentUser.uid, "trades"), newTrade); tradeForm.reset(); $('trade-date').value = getTodaysDate(); }); 
     });
     
-    openTradesModalBtn.onclick = () => { tradesListModal.classList.add('open'); };
+    openTradesModalBtn.onclick = () => { cameFromSummary = false; tradesListModal.classList.add('open'); };
     openSummaryModalBtn.onclick = () => { renderSummary(); summaryModal.classList.add('open'); };
-    closeTradesModalBtn.onclick = () => { tradesListModal.classList.remove('open'); };
     closeSummaryModalBtn.onclick = () => { summaryModal.classList.remove('open'); };
+    closeTradesModalBtn.onclick = () => {
+        tradesListModal.classList.remove('open');
+        if (cameFromSummary) {
+            summaryModal.classList.add('open');
+            cameFromSummary = false;
+        }
+    };
     taxInfoBtn.addEventListener('click', () => { taxInfoModal.innerHTML = `<div class="card p-8 w-full max-w-md"><h3 class="text-xl font-semibold mb-4 text-white">מס שנתי משוערך</h3><p class="text-gray-300">הסכום המוצג הוא הערכה של חבות המס על רווחי הון שמומשו מתחילת השנה הקלנדרית, **לאחר קיזוז הפסדים ועמלות** שמומשו באותה התקופה.</p><ul class="list-disc list-inside text-gray-400 my-4 space-y-2"><li>החישוב מתבסס על שיעור מס של 25% על הרווח הנקי.</li><li>אינו לוקח בחשבון קיזוז הפסדים משנים קודמות.</li><li>מומלץ להתייעץ עם רואה חשבון או יועץ מס לקבלת חישוב מדויק.</li></ul><div class="flex justify-center mt-6"><button id="close-tax-info-btn" class="btn-primary px-6 py-2">הבנתי</button></div></div>`; taxInfoModal.classList.remove('hidden'); $('close-tax-info-btn').onclick = () => taxInfoModal.classList.add('hidden'); });
     exportTradesBtn.addEventListener('click', () => { const toExport = getFilteredTrades(); if (toExport.length === 0) { showMessage("שגיאה", 'אין עסקאות לייצא.'); return; } const dataStr = JSON.stringify(toExport); const script = `<script> const allTrades=${dataStr}; function formatC(n){if(n==null||isNaN(n))return'N/A';const f=Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});return n<0?'\\u200e-'+f+'$':'\\u200e'+f+'$'} function calcPL(t){if(t.exit===null||t.exit===undefined||t.exit==='')return null;const e=parseFloat(t.entry),x=parseFloat(t.exit),q=parseFloat(t.quantity),c=parseFloat(t.commission)||0;const g=(t.type||'long')==='long'?(x-e)*q:(e-x)*q;return g-c} function renderT(trades){const b=document.getElementById('trades-tbody');b.innerHTML='';trades.forEach(t=>{const p=calcPL(t);const iC=p!==null?(p>=0?'#16a34a':'#dc2626'):'#facc15';const ind='<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background-color:'+iC+';-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>';const inv=parseFloat(t.entry)*parseFloat(t.quantity);const pP=p!==null&&inv>0?((p/inv)*100).toFixed(2)+'%':'N/A';const r=document.createElement('tr');r.innerHTML='<td>'+ind+'</td><td>'+new Date(t.date).toLocaleDateString('he-IL')+'</td><td>'+t.ticker+'</td><td>'+((t.type||'long')==='long'?'לונג':'שורט')+'</td><td>'+t.quantity+'</td><td>'+formatC(t.entry)+'</td><td>'+formatC(inv)+'</td><td>'+(t.exit?formatC(t.exit):'פתוחה')+'</td><td>'+formatC(t.commission||0)+'</td><td>'+(p!==null?formatC(p):'N/A')+'</td><td>'+pP+'</td>';b.appendChild(r)});const closed=trades.filter(t=>calcPL(t)!==null);const totPL=closed.reduce((s,t)=>s+calcPL(t),0);const tax=totPL>0?totPL*0.25:0;const net=totPL-tax;document.getElementById('summary').innerHTML='<h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem">סיכום (לפי סינון)</h2><p><strong>סה"כ רווח/הפסד נטו:</strong> <span style="color:'+(totPL>=0?'#16a34a':'#dc2626')+'">'+formatC(totPL)+'</span></p><p><strong>מס לתשלום (25%):</strong> '+formatC(tax)+'</p><p><strong>סה"כ לאחר מס:</strong> <span style="color:'+(net>=0?'#16a34a':'#dc2626')+'">'+formatC(net)+'</span></p>'} function filter(){const t=document.getElementById('filter-ticker').value.toUpperCase(),s=document.getElementById('start-date').value,e=document.getElementById('end-date').value,sort=document.getElementById('sort-trades').value;let f=[...allTrades];if(t)f=f.filter(tr=>tr.ticker.toUpperCase().includes(t));if(s)f=f.filter(tr=>tr.date>=s);if(e)f=f.filter(tr=>tr.date<=e);f.sort((a,b)=>(sort==='date-asc')?new Date(a.date)-new Date(b.date):new Date(b.date)-new Date(a.date));renderT(f)} function clearF(){document.getElementById('filter-ticker').value='';document.getElementById('start-date').value='';document.getElementById('end-date').value='';document.getElementById('sort-trades').selectedIndex=0;filter()} document.addEventListener('DOMContentLoaded',()=>{renderT(allTrades);['filter-ticker','start-date','end-date','sort-trades'].forEach(id=>document.getElementById(id).addEventListener('input',filter));document.getElementById('clear-filter-btn').addEventListener('click',clearF)}) <\/script>`; const headers = ['סטטוס', 'תאריך', 'טיקר', 'סוג', 'כמות', 'כניסה', 'השקעה', 'יציאה', 'עמלה', 'רווח/הפסד נטו', 'תשואה %']; const controls = `<div id="controls" style="padding:1rem 2rem;background:#1f2937;border-radius:.5rem;margin-bottom:2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1.5rem;align-items:end"><div><label style="display:block;font-size:.875rem;margin-bottom:.25rem">טיקר</label><input type="text" id="filter-ticker" placeholder="הכל" style="width:100%;background:#374151;border:1px solid #4b5563;color:#e2e8f0;border-radius:.5rem;padding:.5rem" oninput="this.value=this.value.toUpperCase()"></div><div><label style="display:block;font-size:.875rem;margin-bottom:.25rem">מתאריך</label><input type="date" id="start-date" style="width:100%;background:#374151;border:1px solid #4b5563;color:#e2e8f0;border-radius:.5rem;padding:.5rem"></div><div><label style="display:block;font-size:.875rem;margin-bottom:.25rem">עד תאריך</label><input type="date" id="end-date" style="width:100%;background:#374151;border:1px solid #4b5563;color:#e2e8f0;border-radius:.5rem;padding:.5rem"></div><div><label style="display:block;font-size:.875rem;margin-bottom:.25rem">מיין לפי</label><select id="sort-trades" style="width:100%;background:#374151;border:1px solid #4b5563;color:#e2e8f0;border-radius:.5rem;padding:.5rem"><option value="date-desc">תאריך (חדש לישן)</option><option value="date-asc">תאריך (ישן לחדש)</option></select></div><div><button id="clear-filter-btn" style="width:100%;padding:.5rem;border-radius:.5rem;background-color:#4b5563;color:#e2e8f0;border:1px solid #4b5563;cursor:pointer">נקה פילטר</button></div></div>`; const finalHtml = `<!DOCTYPE html><html lang="he" dir="rtl"><head><title>דוח עסקאות</title><style>body{font-family:Rubik,sans-serif;background:#111827;color:#e2e8f0;padding:2rem}table{width:100%;border-collapse:collapse;margin-bottom:2rem}th,td{text-align:right;padding:8px;border:1px solid #444}th{background:#1f2937}td{padding:12px 8px} ${getStampCSS()} @media print{#controls,button{display:none}body{background:#fff;color:#000}th{background:#f3f4f6!important}td,th{border-color:#ccc}#summary,#controls{background:#f3f4f6;border:1px solid #e5e7eb}}</style></head><body><div style="position:fixed;top:1rem;left:1rem;z-index:100"><button onclick="window.print()" style="padding:.5rem 1rem;background:#fb923c;color:#111827;border:none;border-radius:.5rem;cursor:pointer;font-weight:700">הדפס / שמור כ-PDF</button></div><h1>דוח עסקאות</h1>${controls}<table border="1"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody id="trades-tbody"></tbody></table><div id="summary" style="margin-top:2rem;padding:1.5rem;background:#1f2937;border-radius:.5rem"></div>${getStampHTML()}${script}</body></html>`; openReportWindow(finalHtml); });
     exportTransactionsBtn.addEventListener('click', () => { if (transactions.length === 0) { showMessage("שגיאה", 'אין פעולות בחשבון לייצא.'); return; } const rows = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).map(t => [ new Date(t.date).toLocaleDateString('he-IL'), t.type === 'deposit' ? 'הפקדה' : 'משיכה', `$${t.amount.toFixed(2)}` ]); const deposits = transactions.filter(t=>t.type==='deposit').reduce((s,t)=>s+t.amount,0), withdrawals = transactions.filter(t=>t.type==='withdraw').reduce((s,t)=>s+t.amount,0), net = deposits-withdrawals; const summary = `<div style="margin-top:2rem;padding:1.5rem;background:#1f2937;border-radius:.5rem"><h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem">סיכום מאזן</h2><p><strong>סה"כ הפקדות:</strong> <span style="color:#16a34a">$${deposits.toFixed(2)}</span></p><p><strong>סה"כ משיכות:</strong> <span style="color:#dc2626">$${withdrawals.toFixed(2)}</span></p><p><strong>מאזן נטו:</strong> <span style="color:${net>=0?'#16a34a':'#dc2626'}">$${net.toFixed(2)}</span></p></div>`; const finalHtml = `<!DOCTYPE html><html lang="he" dir="rtl"><head><title>דוח פעולות בחשבון</title><style>body{font-family:Rubik,sans-serif;background:#111827;color:#e2e8f0;padding:2rem}table{width:100%;border-collapse:collapse;margin-bottom:2rem}th,td{text-align:right;padding:8px;border:1px solid #444}th{background:#1f2937} ${getStampCSS()} @media print{button{display:none}body{background:#fff;color:#000}th{background:#f3f4f6!important}td,th{border-color:#ccc}div[style*="background:#1f2937"]{background:#f3f4f6!important;border:1px solid #e5e7eb}}</style></head><body><div style="position:fixed;top:1rem;left:1rem;z-index:100"><button onclick="window.print()" style="padding:.5rem 1rem;background:#fb923c;color:#111827;border:none;border-radius:.5rem;cursor:pointer;font-weight:700">הדפס / שמור כ-PDF</button></div><h1>דוח פעולות בחשבון</h1><table><thead><tr><th>תאריך</th><th>סוג פעולה</th><th>סכום ($)</th></tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>${summary}${getStampHTML()}</body></html>`; openReportWindow(finalHtml); });

@@ -14,9 +14,6 @@ body { font-family: 'Rubik', sans-serif; background-color: #111827; color: #e2e8
 .btn-icon:hover { background-color: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
 .btn-secondary { background-color: #374151; color: #e2e8f0; }
 .btn-secondary:hover { background-color: #4b5563; }
-.btn-spinner {
-    animation: spin 1s linear infinite;
-}
 
 /* Profit/Loss colors */
 .pl-positive { color: #16a34a; }
@@ -25,11 +22,14 @@ body { font-family: 'Rubik', sans-serif; background-color: #111827; color: #e2e8
 
 /* UI elements */
 .collapsible-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-/* === [תיקון] הוספת גלילה פנימית לתפריט הראשי === */
 #main-menu-card-content {
-    max-height: 60vh; /* גובה מקסימלי לפני שמתחיל גלגול */
-    overflow-y: auto; /* הוספת פס גלילה אוטומטי במידת הצורך */
+    max-height: 65vh; 
+    overflow-y: hidden;
 }
+#main-menu-card-content.is-scrollable {
+    overflow-y: auto;
+}
+
 .bronze-gradient { background-image: linear-gradient(to right, #fde68a, #ca8a04, #854d0e); }
 #app-container.blurred, #auth-overlay.blurred { filter: blur(5px); pointer-events: none; }
 .loader { border: 4px solid #f3f3f3; border-top: 4px solid #fb923c; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
@@ -51,7 +51,9 @@ body { font-family: 'Rubik', sans-serif; background-color: #111827; color: #e2e8
 .full-screen-module.open { visibility: visible; opacity: 1; }
 .z-45 { z-index: 45; }
 
-#message-modal { z-index: 60; }
+.z-50 { z-index: 50; }
+.z-55 { z-index: 55; }
+.z-60 { z-index: 60; }
 
 /* Hide number input arrows */
 input[type=number]::-webkit-inner-spin-button,
@@ -68,4 +70,53 @@ input[type=number] {
     border-color: #fb923c !important;
     background-color: rgba(251, 146, 60, 0.2) !important;
     font-weight: bold;
+}
+
+#main-menu-card-content::-webkit-scrollbar { width: 6px; }
+#main-menu-card-content::-webkit-scrollbar-track { background: transparent; }
+#main-menu-card-content::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+#main-menu-card-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+.chart-toggle-btn {
+    padding: 0.25rem 0.75rem;
+    border: none;
+    background-color: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+}
+.chart-toggle-btn.active {
+    background-color: #4b5563;
+    color: #e2e8f0;
+    font-weight: 600;
+}
+
+
+@media print {
+    body, .card, #summary, #controls, .report-container {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+    * {
+        box-shadow: none !important;
+        text-shadow: none !important;
+        background-color: transparent !important;
+        color: #000 !important;
+    }
+    table, th, td, .summary-card {
+        border: 1px solid #ccc !important;
+    }
+    th {
+        background-color: #f3f4f6 !important;
+    }
+    h1, h2, h3, h4, p, span, div {
+        color: #000000 !important;
+    }
+    .pl-positive { color: #16a34a !important; }
+    .pl-negative { color: #dc2626 !important; }
+    button, #controls {
+        display: none !important;
+    }
 }
