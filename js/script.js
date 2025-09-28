@@ -478,33 +478,33 @@ const updateDoughnutChart = (wins, losses) => {
     // ---------------------------------
     const performDbAction = async (action) => { if (!currentUser) { showMessage("שגיאה", "עליך להיות מחובר."); return; } try { await action(); } catch (e) { console.error("Firestore Error:", e); showMessage("שגיאה", "אירעה שגיאה בבסיס הנתונים."); } };
     
-    // ---------------------------------
-    //  REPORTS
-    // ---------------------------------
-    const getReportStyles = () => {
-        return `<style>
-            @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap');
-            body{font-family:Rubik,sans-serif;background-color:#fff;color:#000;padding:2rem;}
-            table{width:100%;border-collapse:collapse;margin-bottom:2rem}
-            th,td{text-align:right;padding:8px;border:1px solid #ccc}
-            th{background-color:#f3f4f6}
-            td{padding:12px 8px}
-            #summary, .report-container div {background-color:#f3f4f6;border:1px solid #e5e7eb;padding:1.5rem;border-radius:.5rem}
-            h1{font-size:2rem;text-align:center;margin-bottom:1rem}
-            .pl-positive { color: #16a34a !important; }
-            .pl-negative { color: #dc2626 !important; }
-            .stamp-wrapper{display:flex;align-items:center;justify-content:flex-start;gap:15px;margin-top:2rem;padding-top:1.5rem;border-top:1px solid #ccc;}
-            .stamp-text{font-size:0.875rem;color:#333;}
-            .stamp-container{position:relative;width:80px;height:80px;}
-            .stamp-circle{position:relative;width:100%;height:100%;border-radius:50%;border:3px solid #000;color:#000;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:5px;box-sizing:border-box;transform:rotate(-10deg);}
-            .stamp-text-line{font-size:0.8rem;font-weight:700;line-height:1;letter-spacing:1px;font-family:'Playfair Display',serif;}
-            .stamp-number-line{font-size:1.2rem;font-weight:700;line-height:1;margin:2px 0;font-family:'Playfair Display',serif;}
-            .stamp-line{width:60%;height:1px;background-color:#000;margin:2px 0;}
-        </style>`;
-    };
-    const getStampHTML = () => `<div class="stamp-wrapper"><p class="stamp-text">מסמך זה הופק על ידי</p><div class="stamp-container"><div class="stamp-circle"><div class="stamp-text-line">trading</div><div class="stamp-text-line">journal</div><div class="stamp-number-line">44</div><div class="stamp-line"></div></div></div></div>`;
-    const openReportWindow = (html) => { const win = window.open("", "ReportWindow"); win.document.open(); win.document.write(html); win.document.close(); };
-
+// =================================
+//  REPORTS
+// =================================
+const getReportStyles = () => {
+    const stampCSS = `@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap');.stamp-wrapper{display:flex;align-items:center;justify-content:flex-start;gap:15px;margin-top:2rem;padding-top:1.5rem;border-top:1px solid #ccc;}.stamp-text{font-size:0.875rem;color:#333;}.stamp-container{position:relative;width:80px;height:80px;}.stamp-circle{position:relative;width:100%;height:100%;border-radius:50%;border:3px solid #000;color:#000;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:5px;box-sizing:border-box;transform:rotate(-10deg);}.stamp-text-line{font-size:0.8rem;font-weight:700;line-height:1;letter-spacing:1px;font-family:'Playfair Display',serif;}.stamp-number-line{font-size:1.2rem;font-weight:700;line-height:1;margin:2px 0;font-family:'Playfair Display',serif;}.stamp-line{width:60%;height:1px;background-color:#000;margin:2px 0;}`;
+    return `<style>
+        body{font-family:Rubik,sans-serif;background-color:#fff;color:#000;padding:2rem;}
+        table{width:100%;border-collapse:collapse;margin-bottom:2rem}
+        th,td{text-align:right;padding:8px;border:1px solid #ccc}
+        th{background-color:#f3f4f6}
+        td{padding:12px 8px}
+        #summary, .report-container div, #controls {background-color:#f3f4f6;border:1px solid #e5e7eb;padding:1.5rem;border-radius:.5rem}
+        h1{font-size:2rem;text-align:center;margin-bottom:1rem}
+        .pl-positive { color: #16a34a !important; }
+        .pl-negative { color: #dc2626 !important; }
+        .print-btn-container { position: fixed; top: 0; left: 0; right: 0; padding: 0.5rem; text-align: center; background: #e2e8f0; border-bottom: 1px solid #ccc; z-index: 100; }
+        .print-btn-container button { padding: .5rem 1rem; background:#374151; color:#fff; border:none; border-radius:.5rem; cursor:pointer; font-weight:700; }
+        input, select {width:100%;background:#fff;border:1px solid #ccc;color:#000;border-radius:.5rem;padding:.5rem}
+        label {display:block;font-size:.875rem;margin-bottom:.25rem}
+        #controls {margin-bottom:2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1.5rem;align-items:end}
+        #clear-filter-btn {width:100%;padding:.5rem;border-radius:.5rem;background-color:#e5e7eb;color:#000;border:1px solid #ccc;cursor:pointer}
+        @media print { .print-btn-container { display: none !important; } }
+        ${stampCSS}
+    </style>`;
+};
+const getStampHTML = () => `<div class="stamp-wrapper"><p class="stamp-text">מסמך זה הופק על ידי</p><div class="stamp-container"><div class="stamp-circle"><div class="stamp-text-line">trading</div><div class="stamp-text-line">journal</div><div class="stamp-number-line">44</div><div class="stamp-line"></div></div></div></div>`;
+const openReportWindow = (html) => { const win = window.open("", "_blank"); win.document.open(); win.document.write(html); win.document.close(); };
     // ---------------------------------
     //  EVENT LISTENERS & INITIALIZATION
     // ---------------------------------
