@@ -313,8 +313,8 @@ const updateDoughnutChart = (wins, losses) => {
                 }
             }
         });
-    };
-     const updateLineChart = () => {
+    };    
+    const updateLineChart = () => {
         const ctx = $('cumulative-pl-chart').getContext('2d');
         if (lineChart) lineChart.destroy();
 
@@ -446,7 +446,7 @@ const updateDoughnutChart = (wins, losses) => {
                 updateCommissionInputVisibility();
             });
             
-            tradesUnsubscribe = onSnapshot(query(collection(db, "users", user.uid, "trades")), s => {
+            tradesUnsubscribe = onSnapshot(query(collection(db, "users", currentUser.uid, "trades")), s => {
                 trades = s.docs.map(d => {
                     const tradeData = d.data();
                     if (tradeData.exit !== null && !tradeData.exitDate) {
@@ -458,7 +458,7 @@ const updateDoughnutChart = (wins, losses) => {
                 startLiveData();
             });
 
-            transactionsUnsubscribe = onSnapshot(query(collection(db, "users", user.uid, "transactions")), s => { transactions = s.docs.map(d => ({ id: d.id, ...d.data() })); updateUI(); });
+            transactionsUnsubscribe = onSnapshot(query(collection(db, "users", currentUser.uid, "transactions")), s => { transactions = s.docs.map(d => ({ id: d.id, ...d.data() })); updateUI(); });
         } else {
             currentUser = null; trades = []; transactions = []; userSettings = { apiKey: '', broker: 'none' };
             if (tradesUnsubscribe) tradesUnsubscribe(); if (transactionsUnsubscribe) transactionsUnsubscribe(); if (settingsUnsubscribe) settingsUnsubscribe();
@@ -478,33 +478,48 @@ const updateDoughnutChart = (wins, losses) => {
     // ---------------------------------
     const performDbAction = async (action) => { if (!currentUser) { showMessage("שגיאה", "עליך להיות מחובר."); return; } try { await action(); } catch (e) { console.error("Firestore Error:", e); showMessage("שגיאה", "אירעה שגיאה בבסיס הנתונים."); } };
     
-// =================================
-//  REPORTS
-// =================================
-const getReportStyles = () => {
-    const stampCSS = `@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap');.stamp-wrapper{display:flex;align-items:center;justify-content:flex-start;gap:15px;margin-top:2rem;padding-top:1.5rem;border-top:1px solid #ccc;}.stamp-text{font-size:0.875rem;color:#333;}.stamp-container{position:relative;width:80px;height:80px;}.stamp-circle{position:relative;width:100%;height:100%;border-radius:50%;border:3px solid #000;color:#000;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:5px;box-sizing:border-box;transform:rotate(-10deg);}.stamp-text-line{font-size:0.8rem;font-weight:700;line-height:1;letter-spacing:1px;font-family:'Playfair Display',serif;}.stamp-number-line{font-size:1.2rem;font-weight:700;line-height:1;margin:2px 0;font-family:'Playfair Display',serif;}.stamp-line{width:60%;height:1px;background-color:#000;margin:2px 0;}`;
-    return `<style>
-        body{font-family:Rubik,sans-serif;background-color:#fff;color:#000;padding:2rem;padding-top: 5rem;}
-        table{width:100%;border-collapse:collapse;margin-bottom:2rem}
-        th,td{text-align:right;padding:8px;border:1px solid #ccc}
-        th{background-color:#f3f4f6}
-        td{padding:12px 8px}
-        #summary, .report-container div, #controls {background-color:#f3f4f6;border:1px solid #e5e7eb;padding:1.5rem;border-radius:.5rem}
-        h1{font-size:2rem;text-align:center;margin-bottom:1rem}
-        .pl-positive { color: #16a34a !important; }
-        .pl-negative { color: #dc2626 !important; }
-        .print-btn-container { position: fixed; top: 0; left: 0; right: 0; padding: 0.75rem; text-align: center; background: #374151; z-index: 100; }
-        .print-btn-container button { padding: .5rem 1rem; background:#fb923c; color:#111827; border:none; border-radius:.5rem; cursor:pointer; font-weight:700; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        input, select {width:100%;background:#fff;border:1px solid #ccc;color:#000;border-radius:.5rem;padding:.5rem}
-        label {display:block;font-size:.875rem;margin-bottom:.25rem}
-        #controls {margin-bottom:2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1.5rem;align-items:end}
-        #clear-filter-btn {width:100%;padding:.5rem;border-radius:.5rem;background-color:#e5e7eb;color:#000;border:1px solid #ccc;cursor:pointer}
-        @media print { .print-btn-container { display: none !important; } }
-        ${stampCSS}
-    </style>`;
-};
-const getStampHTML = () => `<div class="stamp-wrapper"><p class="stamp-text">מסמך זה הופק על ידי</p><div class="stamp-container"><div class="stamp-circle"><div class="stamp-text-line">trading</div><div class="stamp-text-line">journal</div><div class="stamp-number-line">44</div><div class="stamp-line"></div></div></div></div>`;
-const openReportWindow = (html) => { const win = window.open("", "_blank"); win.document.open(); win.document.write(html); win.document.close(); };    // ---------------------------------
+    // ---------------------------------
+    //  REPORTS
+    // ---------------------------------
+    const getReportStyles = () => {
+        const stampCSS = `@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap');.stamp-wrapper{display:flex;align-items:center;justify-content:flex-start;gap:15px;margin-top:2rem;padding-top:1.5rem;border-top:1px solid #ccc;}.stamp-text{font-size:0.875rem;color:#333;}.stamp-container{position:relative;width:80px;height:80px;}.stamp-circle{position:relative;width:100%;height:100%;border-radius:50%;border:3px solid #000;color:#000;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:5px;box-sizing:border-box;transform:rotate(-10deg);}.stamp-text-line{font-size:0.8rem;font-weight:700;line-height:1;letter-spacing:1px;font-family:'Playfair Display',serif;}.stamp-number-line{font-size:1.2rem;font-weight:700;line-height:1;margin:2px 0;font-family:'Playfair Display',serif;}.stamp-line{width:60%;height:1px;background-color:#000;margin:2px 0;}`;
+        return `<style>
+            body{font-family:Rubik,sans-serif;background-color:#fff;color:#000;padding:2rem;padding-top: 5rem;}
+            table{width:100%;border-collapse:collapse;margin-bottom:2rem}
+            th,td{text-align:right;padding:8px;border:1px solid #ccc}
+            th{background-color:#f3f4f6}
+            td{padding:12px 8px}
+            #summary, .report-container div, #controls {background-color:#f3f4f6;border:1px solid #e5e7eb;padding:1.5rem;border-radius:.5rem}
+            h1{font-size:2rem;text-align:center;margin-bottom:1rem}
+            .pl-positive { color: #16a34a !important; }
+            .pl-negative { color: #dc2626 !important; }
+            .print-btn-container { position: fixed; top: 1rem; left: 1rem; z-index: 100; }
+            .print-btn-container button { padding: .5rem 1rem; background:#f97316; color:#fff; border:none; border-radius:.5rem; cursor:pointer; font-weight:700; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+            input, select {width:100%;background:#fff;border:1px solid #ccc;color:#000;border-radius:.5rem;padding:.5rem}
+            label {display:block;font-size:.875rem;margin-bottom:.25rem}
+            #controls {margin-bottom:2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1.5rem;align-items:end}
+            #clear-filter-btn {width:100%;padding:.5rem;border-radius:.5rem;background-color:#e5e7eb;color:#000;border:1px solid #ccc;cursor:pointer}
+            @media print { 
+                body { padding-top: 2rem; }
+                .print-btn-container, #controls { display: none !important; } 
+                table { font-size: 10pt; }
+            }
+            ${stampCSS}
+        </style>`;
+    };
+    const getStampHTML = () => `<div class="stamp-wrapper"><p class="stamp-text">מסמך זה הופק על ידי</p><div class="stamp-container"><div class="stamp-circle"><div class="stamp-text-line">trading</div><div class="stamp-text-line">journal</div><div class="stamp-number-line">44</div><div class="stamp-line"></div></div></div></div>`;
+    const openReportWindow = (html) => {
+        const win = window.open("", "_blank");
+        if (!win || win.closed || typeof win.closed == 'undefined') {
+            showMessage("שגיאה בפתיחת דוח", "נראה שהדפדפן שלך חסם את פתיחת החלון. \nאנא ודא שחוסם החלונות הקופצים מבוטל עבור אתר זה.", 0);
+            return;
+        }
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+    };
+
+    // ---------------------------------
     //  EVENT LISTENERS & INITIALIZATION
     // ---------------------------------
     document.body.addEventListener('click', e => { 
@@ -515,8 +530,8 @@ const openReportWindow = (html) => { const win = window.open("", "_blank"); win.
         if (e.target.closest('#clear-filters-btn-list')) { clearFilters(); } 
         if (e.target.closest('#clickable-open-trades')) {
             cameFromSummary = true;
+            clearFilters();
             currentFilters.status = 'open';
-            currentFilters.plStatus = 'all';
             summaryModal.classList.remove('open');
             tradesListModal.classList.add('open');
             renderTrades();
@@ -524,8 +539,8 @@ const openReportWindow = (html) => { const win = window.open("", "_blank"); win.
         }
         if (e.target.closest('#clickable-closed-trades')) {
             cameFromSummary = true;
+            clearFilters();
             currentFilters.status = 'closed';
-            currentFilters.plStatus = 'all';
             summaryModal.classList.remove('open');
             tradesListModal.classList.add('open');
             renderTrades();
@@ -604,8 +619,8 @@ const openReportWindow = (html) => { const win = window.open("", "_blank"); win.
         clearFilters();
     };
     taxInfoBtn.addEventListener('click', () => { taxInfoModal.innerHTML = `<div class="card p-8 w-full max-w-md"><h3 class="text-xl font-semibold mb-4 text-white">מס שנתי משוערך</h3><p class="text-gray-300">הסכום המוצג הוא הערכה של חבות המס על רווחי הון שמומשו מתחילת השנה הקלנדרית, **לאחר קיזוז הפסדים ועמלות** שמומשו באותה התקופה.</p><ul class="list-disc list-inside text-gray-400 my-4 space-y-2"><li>החישוב מתבסס על שיעור מס של 25% על הרווח הנקי.</li><li>אינו לוקח בחשבון קיזוז הפסדים משנים קודמות.</li><li>מומלץ להתייעץ עם רואה חשבון או יועץ מס לקבלת חישוב מדויק.</li></ul><div class="flex justify-center mt-6"><button id="close-tax-info-btn" class="btn-primary px-6 py-2">הבנתי</button></div></div>`; taxInfoModal.classList.remove('hidden'); $('close-tax-info-btn').onclick = () => taxInfoModal.classList.add('hidden'); });
-    exportTradesBtn.addEventListener('click', () => { const toExport = getFilteredTrades(); if (toExport.length === 0) { showMessage("שגיאה", 'אין עסקאות לייצא.'); return; } const dataStr = JSON.stringify(toExport); const script = `<script> const allTrades=${dataStr}; function formatC(n){if(n==null||isNaN(n))return'N/A';const f=Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});return n<0?'\\u200e-'+f+'$':'\\u200e'+f+'$'} function calcPL(t){if(t.exit===null||t.exit===undefined||t.exit==='')return null;const e=parseFloat(t.entry),x=parseFloat(t.exit),q=parseFloat(t.quantity),c=parseFloat(t.commission)||0;const g=(t.type||'long')==='long'?(x-e)*q:(e-x)*q;return g-c} function renderT(trades){const b=document.getElementById('trades-tbody');b.innerHTML='';trades.forEach(t=>{const p=calcPL(t);const iC=p!==null?(p>=0?'#16a34a':'#dc2626'):'#facc15';const ind='<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background-color:'+iC+';-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>';const inv=parseFloat(t.entry)*parseFloat(t.quantity);const pP=p!==null&&inv>0?((p/inv)*100).toFixed(2)+'%':'N/A';const r=document.createElement('tr');r.innerHTML='<td>'+ind+'</td><td>'+new Date(t.date).toLocaleDateString('he-IL')+'</td><td>'+t.ticker+'</td><td>'+((t.type||'long')==='long'?'לונג':'שורט')+'</td><td>'+t.quantity+'</td><td>'+formatC(t.entry)+'</td><td>'+formatC(inv)+'</td><td>'+(t.exit?formatC(t.exit):'פתוחה')+'</td><td>'+formatC(t.commission||0)+'</td><td>'+(p!==null?formatC(p):'N/A')+'</td><td>'+pP+'</td>';b.appendChild(r)});const closed=trades.filter(t=>calcPL(t)!==null);const totPL=closed.reduce((s,t)=>s+calcPL(t),0);const tax=totPL>0?totPL*0.25:0;const net=totPL-tax;document.getElementById('summary').innerHTML='<h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem">סיכום (לפי סינון)</h2><p><strong>סה"כ רווח/הפסד נטו:</strong> <span style="color:'+(totPL>=0?'#16a34a':'#dc2626')+'">'+formatC(totPL)+'</span></p><p><strong>מס לתשלום (25%):</strong> '+formatC(tax)+'</p><p><strong>סה"כ לאחר מס:</strong> <span style="color:'+(net>=0?'#16a34a':'#dc2626')+'">'+formatC(net)+'</span></p>'} function filter(){const t=document.getElementById('filter-ticker').value.toUpperCase(),s=document.getElementById('start-date').value,e=document.getElementById('end-date').value,sort=document.getElementById('sort-trades').value;let f=[...allTrades];if(t)f=f.filter(tr=>tr.ticker.toUpperCase().includes(t));if(s)f=f.filter(tr=>tr.date>=s);if(e)f=f.filter(tr=>tr.date<=e);f.sort((a,b)=>(sort==='date-asc')?new Date(a.date)-new Date(b.date):new Date(b.date)-new Date(a.date));renderT(f)} function clearF(){document.getElementById('filter-ticker').value='';document.getElementById('start-date').value='';document.getElementById('end-date').value='';document.getElementById('sort-trades').selectedIndex=0;filter()} document.addEventListener('DOMContentLoaded',()=>{renderT(allTrades);['filter-ticker','start-date','end-date','sort-trades'].forEach(id=>document.getElementById(id).addEventListener('input',filter));document.getElementById('clear-filter-btn').addEventListener('click',clearF)}) <\/script>`; const headers = ['סטטוס', 'תאריך', 'טיקר', 'סוג', 'כמות', 'כניסה', 'השקעה', 'יציאה', 'עמלה', 'רווח/הפסד נטו', 'תשואה %']; const controls = `<div id="controls" style="padding:1rem 2rem;background-color:#f3f4f6;border:1px solid #e5e7eb;border-radius:.5rem;margin-bottom:2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1.5rem;align-items:end"><div><label style="display:block;font-size:.875rem;margin-bottom:.25rem">טיקר</label><input type="text" id="filter-ticker" placeholder="הכל" style="width:100%;background:#fff;border:1px solid #ccc;color:#000;border-radius:.5rem;padding:.5rem" oninput="this.value=this.value.toUpperCase()"></div><div><label style="display:block;font-size:.875rem;margin-bottom:.25rem">מתאריך</label><input type="date" id="start-date" style="width:100%;background:#fff;border:1px solid #ccc;color:#000;border-radius:.5rem;padding:.5rem"></div><div><label style="display:block;font-size:.875rem;margin-bottom:.25rem">עד תאריך</label><input type="date" id="end-date" style="width:100%;background:#fff;border:1px solid #ccc;color:#000;border-radius:.5rem;padding:.5rem"></div><div><label style="display:block;font-size:.875rem;margin-bottom:.25rem">מיין לפי</label><select id="sort-trades" style="width:100%;background:#fff;border:1px solid #ccc;color:#000;border-radius:.5rem;padding:.5rem"><option value="date-desc">תאריך (חדש לישן)</option><option value="date-asc">תאריך (ישן לחדש)</option></select></div><div><button id="clear-filter-btn" style="width:100%;padding:.5rem;border-radius:.5rem;background-color:#e5e7eb;color:#000;border:1px solid #ccc;cursor:pointer">נקה פילטר</button></div></div>`; const finalHtml = `<!DOCTYPE html><html lang="he" dir="rtl"><head><title>דוח עסקאות</title>${getReportStyles()}</head><body><h1>דוח עסקאות</h1>${controls}<table border="1"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody id="trades-tbody"></tbody></table><div id="summary"></div>${getStampHTML()}${script}</body></html>`; openReportWindow(finalHtml); });
-    exportTransactionsBtn.addEventListener('click', () => { if (transactions.length === 0) { showMessage("שגיאה", 'אין פעולות בחשבון לייצא.'); return; } const rows = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).map(t => [ new Date(t.date).toLocaleDateString('he-IL'), t.type === 'deposit' ? 'הפקדה' : 'משיכה', `$${t.amount.toFixed(2)}` ]); const deposits = transactions.filter(t=>t.type==='deposit').reduce((s,t)=>s+t.amount,0), withdrawals = transactions.filter(t=>t.type==='withdraw').reduce((s,t)=>s+t.amount,0), net = deposits-withdrawals; const summary = `<div style="margin-top:2rem;padding:1.5rem;background-color:#f3f4f6;border:1px solid #e5e7eb;border-radius:.5rem"><h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem">סיכום מאזן</h2><p><strong>סה"כ הפקדות:</strong> <span style="color:#16a34a">$${deposits.toFixed(2)}</span></p><p><strong>סה"כ משיכות:</strong> <span style="color:#dc2626">$${withdrawals.toFixed(2)}</span></p><p><strong>מאזן נטו:</strong> <span style="color:${net>=0?'#16a34a':'#dc2626'}">$${net.toFixed(2)}</span></p></div>`; const finalHtml = `<!DOCTYPE html><html lang="he" dir="rtl"><head><title>דוח פעולות בחשבון</title>${getReportStyles()}</head><body><h1>דוח פעולות בחשבון</h1><table><thead><tr><th>תאריך</th><th>סוג פעולה</th><th>סכום ($)</th></tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>${summary}${getStampHTML()}</body></html>`; openReportWindow(finalHtml); });
+    exportTradesBtn.addEventListener('click', () => { const toExport = getFilteredTrades(); if (toExport.length === 0) { showMessage("שגיאה", 'אין עסקאות לייצא.'); return; } const dataStr = JSON.stringify(toExport); const script = `<script> const allTrades=${dataStr}; function formatC(n){if(n==null||isNaN(n))return'N/A';const f=Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});return n<0?'\\u200e-'+f+'$':'\\u200e'+f+'$'} function calcPL(t){if(t.exit===null||t.exit===undefined||t.exit==='')return null;const e=parseFloat(t.entry),x=parseFloat(t.exit),q=parseFloat(t.quantity),c=parseFloat(t.commission)||0;const g=(t.type||'long')==='long'?(x-e)*q:(e-x)*q;return g-c} function renderT(trades){const b=document.getElementById('trades-tbody');b.innerHTML='';trades.forEach(t=>{const p=calcPL(t);const iC=p!==null?(p>=0?'#16a34a':'#dc2626'):'#facc15';const ind='<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background-color:'+iC+';-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>';const inv=parseFloat(t.entry)*parseFloat(t.quantity);const pP=p!==null&&inv>0?((p/inv)*100).toFixed(2)+'%':'N/A';const r=document.createElement('tr');r.innerHTML='<td>'+ind+'</td><td>'+new Date(t.date).toLocaleDateString('he-IL')+'</td><td>'+t.ticker+'</td><td>'+((t.type||'long')==='long'?'לונג':'שורט')+'</td><td>'+t.quantity+'</td><td>'+formatC(t.entry)+'</td><td>'+formatC(inv)+'</td><td>'+(t.exit?formatC(t.exit):'פתוחה')+'</td><td>'+formatC(t.commission||0)+'</td><td>'+(p!==null?formatC(p):'N/A')+'</td><td>'+pP+'</td>';b.appendChild(r)});const closed=trades.filter(t=>calcPL(t)!==null);const totPL=closed.reduce((s,t)=>s+calcPL(t),0);const tax=totPL>0?totPL*0.25:0;const net=totPL-tax;document.getElementById('summary').innerHTML='<h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem">סיכום (לפי סינון)</h2><p><strong>סה"כ רווח/הפסד נטו:</strong> <span style="color:'+(totPL>=0?'#16a34a':'#dc2626')+'">'+formatC(totPL)+'</span></p><p><strong>מס לתשלום (25%):</strong> <span style="color:#dc2626">'+formatC(tax)+'</span></p><p><strong>סה"כ לאחר מס:</strong> <span style="color:'+(net>=0?'#16a34a':'#dc2626')+'">'+formatC(net)+'</span></p>'} function filter(){const t=document.getElementById('filter-ticker').value.toUpperCase(),s=document.getElementById('start-date').value,e=document.getElementById('end-date').value,sort=document.getElementById('sort-trades').value;let f=[...allTrades];if(t)f=f.filter(tr=>tr.ticker.toUpperCase().includes(t));if(s)f=f.filter(tr=>tr.date>=s);if(e)f=f.filter(tr=>tr.date<=e);f.sort((a,b)=>(sort==='date-asc')?new Date(a.date)-new Date(b.date):new Date(b.date)-new Date(a.date));renderT(f)} function clearF(){document.getElementById('filter-ticker').value='';document.getElementById('start-date').value='';document.getElementById('end-date').value='';document.getElementById('sort-trades').selectedIndex=0;filter()} document.addEventListener('DOMContentLoaded',()=>{renderT(allTrades);['filter-ticker','start-date','end-date','sort-trades'].forEach(id=>document.getElementById(id).addEventListener('input',filter));document.getElementById('clear-filter-btn').addEventListener('click',clearF)}) <\/script>`; const headers = ['סטטוס', 'תאריך', 'טיקר', 'סוג', 'כמות', 'כניסה', 'השקעה', 'יציאה', 'עמלה', 'רווח/הפסד נטו', 'תשואה %']; const printBtn = `<div class="print-btn-container"><button onclick="window.print()">הדפס / שמור כ-PDF</button></div>`; const controls = `<div id="controls"><div><label>טיקר</label><input type="text" id="filter-ticker" placeholder="הכל" oninput="this.value=this.value.toUpperCase()"></div><div><label>מתאריך</label><input type="date" id="start-date"></div><div><label>עד תאריך</label><input type="date" id="end-date"></div><div><label>מיין לפי</label><select id="sort-trades"><option value="date-desc">תאריך (חדש לישן)</option><option value="date-asc">תאריך (ישן לחדש)</option></select></div><div><button id="clear-filter-btn">נקה פילטר</button></div></div>`; const finalHtml = `<!DOCTYPE html><html lang="he" dir="rtl"><head><title>דוח עסקאות</title>${getReportStyles()}</head><body>${printBtn}<h1>דוח עסקאות</h1>${controls}<table border="1"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody id="trades-tbody"></tbody></table><div id="summary" class="summary-box"></div>${getStampHTML()}${script}</body></html>`; openReportWindow(finalHtml); });
+    exportTransactionsBtn.addEventListener('click', () => { if (transactions.length === 0) { showMessage("שגיאה", 'אין פעולות בחשבון לייצא.'); return; } const rows = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).map(t => [ new Date(t.date).toLocaleDateString('he-IL'), t.type === 'deposit' ? 'הפקדה' : 'משיכה', `$${t.amount.toFixed(2)}` ]); const deposits = transactions.filter(t=>t.type==='deposit').reduce((s,t)=>s+t.amount,0), withdrawals = transactions.filter(t=>t.type==='withdraw').reduce((s,t)=>s+t.amount,0), net = deposits-withdrawals; const summary = `<div class="summary-box" style="margin-top:2rem;"><h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem">סיכום מאזן</h2><p><strong>סה"כ הפקדות:</strong> <span class="pl-positive">$${deposits.toFixed(2)}</span></p><p><strong>סה"כ משיכות:</strong> <span class="pl-negative">$${withdrawals.toFixed(2)}</span></p><p><strong>מאזן נטו:</strong> <span class="${net>=0?'pl-positive':'pl-negative'}">$${net.toFixed(2)}</span></p></div>`; const printBtn = `<div class="print-btn-container"><button onclick="window.print()">הדפס / שמור כ-PDF</button></div>`; const finalHtml = `<!DOCTYPE html><html lang="he" dir="rtl"><head><title>דוח פעולות בחשבון</title>${getReportStyles()}</head><body>${printBtn}<h1>דוח פעולות בחשבון</h1><table><thead><tr><th>תאריך</th><th>סוג פעולה</th><th>סכום ($)</th></tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>${summary}${getStampHTML()}</body></html>`; openReportWindow(finalHtml); });
     const updateClearFilterButtonVisibility = () => { const isFiltered = currentFilters.ticker || currentFilters.startDate || currentFilters.endDate || currentFilters.plStatus !== 'all' || currentFilters.status !== 'all'; $('clear-filters-btn-list').classList.toggle('hidden', !isFiltered); };
     const clearFilters = () => { 
         currentFilters = { status: 'all', ticker: '', startDate: '', endDate: '', sort: 'date-desc', plStatus: 'all' }; 

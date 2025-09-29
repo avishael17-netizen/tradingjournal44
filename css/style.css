@@ -136,7 +136,7 @@ input[type=number] {
     }
     .pl-positive { color: #16a34a !important; }
     .pl-negative { color: #dc2626 !important; }
-    button, #controls {
+    button, #controls, .print-btn-container {
         display: none !important;
     }
 }
